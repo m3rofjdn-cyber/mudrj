@@ -36,7 +36,7 @@
     <div id="authCard" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
       <div id="alertBox" class="hidden mb-6 p-4 rounded-xl text-sm font-medium border text-center transition-all"></div>
 
-      <!-- قسم قوقل: تم وضع الحاوية الرسمية لتوليد الزر مباشرة -->
+      <!-- قسم قوقل -->
       <div id="googleAuthSection" class="space-y-4 text-center pb-4 border-b border-slate-100">
         <p class="text-xs text-slate-500 font-medium">تسجيل الدخول السريع</p>
         <div class="flex justify-center w-full">
@@ -206,10 +206,7 @@
     let selectedClass = null;
 
     window.onload = () => {
-      // 1. بناء القوائم المنسدلة للفصل تلقائياً
       initModalDropdowns();
-
-      // 2. التحقق من وجود جلسة مسجلة
       const token = localStorage.getItem('userToken');
       const savedUser = localStorage.getItem('userName');
       if (token && savedUser) {
@@ -241,7 +238,6 @@
       });
     }
 
-    // استجابة تسجيل الدخول عبر قوقل
     async function handleCredentialResponse(response) {
       try {
         const res = await fetch(`${API_URL}/api/auth/google`, {
@@ -255,9 +251,9 @@
           localStorage.setItem('userName', data.user.firstName);
           showDashboard(data.user.firstName);
         } else {
-          showAlert(data.message || 'فشل التوثيق مع قوقل');
+          showAlert(data.message || 'فشل التوثيق عبر قوقل');
         }
-      } catch (err) { showAlert('حدث خطأ في الاتصال بالسيرفر أثناء دخول قوقل'); }
+      } catch (err) { showAlert('خطأ أثناء التواصل مع السيرفر'); }
     }
 
     function showAlert(msg, isSuccess = false) {
@@ -365,16 +361,12 @@
     function openAddStudentModal() { document.getElementById('addStudentModal').classList.remove('hidden'); }
     function closeAddStudentModal() { document.getElementById('addStudentModal').classList.add('hidden'); }
 
-    // إضافة الفصل المباشرة والمعالجة
     async function submitCreateClass() {
       const stage = document.getElementById('stageSelect').value;
       const grade = document.getElementById('gradeSelect').value;
       const section = document.getElementById('sectionSelect').value;
-
       const className = `${grade} ${stage} / ${section}`;
       const token = localStorage.getItem('userToken');
-
-      if (!token) return alert('الرجاء إعادة تسجيل الدخول لتنفيذ العملية');
 
       try {
         const res = await fetch(`${API_URL}/api/classes`, {
@@ -389,10 +381,8 @@
         if (data.success) {
           closeAddClassModal();
           await loadClasses();
-        } else {
-          alert(data.message || 'حدث خطأ أثناء إضافة الفصل');
-        }
-      } catch (err) { alert('فشل الاتصال بالسيرفر أثناء إضافة الفصل.'); }
+        } else alert(data.message || 'فشل إضافة الفصل');
+      } catch (err) { alert('خطأ أثناء حفظ الفصل'); }
     }
 
     async function submitAddStudent() {
@@ -416,10 +406,8 @@
           if (!selectedClass.students) selectedClass.students = [];
           selectedClass.students.push(data.student);
           renderStudentsCards();
-        } else {
-          alert(data.message || 'خطأ أثناء إضافة الطالب');
-        }
-      } catch (err) { alert('تعذر الاتصال بالسيرفر لإضافة الطالب.'); }
+        } else alert(data.message);
+      } catch (err) { alert('خطأ في الاتصال بالسيرفر'); }
     }
 
     function openClassView(classId) {
