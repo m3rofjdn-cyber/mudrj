@@ -13,23 +13,21 @@ const GOOGLE_CLIENT_ID = '821921990770-822776a7seho4i8les9lbqjsnut2lv23.apps.goo
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
 if (!process.env.DATABASE_URL) {
-  console.error("FATAL ERROR: DATABASE_URL is not defined in Environment Variables!");
+  console.error("FATAL ERROR: DATABASE_URL is not defined!");
   process.exit(1);
 }
 
-// الاتصال بقاعدة البيانات
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-// تهيئة الجدول
+// تهيئة جداول قاعدة البيانات (المستخدمين، الفصول، والطلاب)
 const initDb = async () => {
   try {
     await pool.query(`
@@ -38,18 +36,44 @@ const initDb = async () => {
         first_name VARCHAR(50) NOT NULL,
         last_name VARCHAR(50),
         username VARCHAR(100) UNIQUE NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
         password VARCHAR(255),
         google_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS classes (
+        id SERIAL PRIMARY KEY,
+        teacher_id INT REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS students (
+        id SERIAL PRIMARY KEY,
+        class_id INT REFERENCES classes(id) ON DELETE CASCADE,
+        name VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log("Database initialized successfully!");
   } catch (err) {
-    console.error("Database connection error:", err.message);
+    console.error("Database initialization error:", err.message);
   }
 };
 initDb();
+
+// Middleware للتحقق من الجلسة (JWT Auth)
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'غير مصرح.' });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ success: false, message: 'الجلسة انتهت.' });
+    req.user = user;
+    next();
+  });
+};
 
 // ------------------- المسارات (Routes) -------------------
 
@@ -57,7 +81,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 1. تسجيل الدخول عبر Google
+// 1. الدخول عبر Google
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false, message: 'التوكن مطلوب' });
@@ -70,16 +94,16 @@ app.post('/api/auth/google', async (req, res) => {
     
     const payload = ticket.getPayload();
     const { sub: googleId, email, given_name: firstName, family_name: lastName } = payload;
+    const username = email.split('@')[0];
 
-    let result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    let result = await pool.query('SELECT * FROM users WHERE username = $1 OR google_id = $2', [username, googleId]);
     let user;
 
     if (result.rows.length === 0) {
-      const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
       const newUser = await pool.query(
-        `INSERT INTO users (first_name, last_name, username, email, google_id) 
-         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-        [firstName || 'User', lastName || '', username, email, googleId]
+        `INSERT INTO users (first_name, last_name, username, google_id) 
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [firstName || 'User', lastName || '', username, googleId]
       );
       user = newUser.rows[0];
     } else {
@@ -87,67 +111,59 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     const jwtToken = jwt.sign(
-      { userId: user.id, username: user.username, email: user.email },
+      { userId: user.id, username: user.username },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
 
     res.json({
       success: true,
-      message: 'تم تسجيل الدخول بنجاح عبر Google',
       token: jwtToken,
-      user: { firstName: user.first_name, lastName: user.last_name, email: user.email }
+      user: { firstName: user.first_name, username: user.username }
     });
-
   } catch (err) {
-    console.error("Google Auth Error:", err);
-    res.status(401).json({ success: false, message: 'فشل التوثيق من Google.' });
+    res.status(401).json({ success: false, message: 'فشل التوثيق عبر Google.' });
   }
 });
 
-// 2. إنشاء حساب عادي
+// 2. إنشاء حساب باسم المستخدم فقط
 app.post('/api/register', async (req, res) => {
-  const { firstName, lastName, username, email, password } = req.body;
+  const { firstName, lastName, username, password } = req.body;
 
-  if (!firstName || !lastName || !username || !email || !password) {
+  if (!firstName || !lastName || !username || !password) {
     return res.status(400).json({ success: false, message: 'جميع الحقول مطلوبة.' });
   }
 
   try {
-    const checkUser = await pool.query(
-      'SELECT * FROM users WHERE email = $1 OR username = $2',
-      [email, username]
-    );
+    const checkUser = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
 
     if (checkUser.rows.length > 0) {
-      return res.status(400).json({ success: false, message: 'اسم الحساب أو البريد الإلكتروني مُسجل مسبقاً.' });
+      return res.status(400).json({ success: false, message: 'اسم المستخدم مسجل مسبقاً.' });
     }
 
     await pool.query(
-      `INSERT INTO users (first_name, last_name, username, email, password) 
-       VALUES ($1, $2, $3, $4, $5)`,
-      [firstName, lastName, username, email, password]
+      `INSERT INTO users (first_name, last_name, username, password) VALUES ($1, $2, $3, $4)`,
+      [firstName, lastName, username, password]
     );
 
     res.json({ success: true, message: 'تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.' });
   } catch (err) {
-    console.error("Register Error:", err);
     res.status(500).json({ success: false, message: 'حدث خطأ في الخادم.' });
   }
 });
 
-// 3. تسجيل الدخول العادي
+// 3. تسجيل الدخول باسم المستخدم
 app.post('/api/login', async (req, res) => {
-  const { identifier, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!identifier || !password) {
+  if (!username || !password) {
     return res.status(400).json({ success: false, message: 'يرجى إدخال البيانات كاملة.' });
   }
 
   try {
     const result = await pool.query(
-      'SELECT * FROM users WHERE (email = $1 OR username = $1) AND password = $2',
-      [identifier, password]
+      'SELECT * FROM users WHERE username = $1 AND password = $2',
+      [username, password]
     );
 
     if (result.rows.length === 0) {
@@ -164,11 +180,61 @@ app.post('/api/login', async (req, res) => {
     res.json({
       success: true,
       token,
-      user: { username: user.username, firstName: user.first_name, email: user.email }
+      user: { username: user.username, firstName: user.first_name }
     });
   } catch (err) {
-    console.error("Login Error:", err);
     res.status(500).json({ success: false, message: 'حدث خطأ أثناء تسجيل الدخول.' });
+  }
+});
+
+// 4. جلب الفصول الخاصة بالمعلم والطلاب التابعين لها
+app.get('/api/classes', authenticateToken, async (req, res) => {
+  try {
+    const classesRes = await pool.query(
+      'SELECT * FROM classes WHERE teacher_id = $1 ORDER BY id DESC',
+      [req.user.userId]
+    );
+
+    const classes = await Promise.all(classesRes.rows.map(async (cls) => {
+      const studentsRes = await pool.query('SELECT * FROM students WHERE class_id = $1 ORDER BY id ASC', [cls.id]);
+      return { ...cls, students: studentsRes.rows };
+    }));
+
+    res.json({ success: true, classes });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'حدث خطأ أثناء جلب البيانات.' });
+  }
+});
+
+// 5. إضافة فصل جديد للمعلم
+app.post('/api/classes', authenticateToken, async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ success: false, message: 'اسم الفصل مطلوب.' });
+
+  try {
+    const newClass = await pool.query(
+      'INSERT INTO classes (teacher_id, name) VALUES ($1, $2) RETURNING *',
+      [req.user.userId, name]
+    );
+    res.json({ success: true, class: newClass.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'حدث خطأ أثناء إدخال الفصل.' });
+  }
+});
+
+// 6. إضافة طالب جديد لفصل معين
+app.post('/api/students', authenticateToken, async (req, res) => {
+  const { classId, name } = req.body;
+  if (!classId || !name) return res.status(400).json({ success: false, message: 'بيانات الطالب غير مكتملة.' });
+
+  try {
+    const newStudent = await pool.query(
+      'INSERT INTO students (class_id, name) VALUES ($1, $2) RETURNING *',
+      [classId, name]
+    );
+    res.json({ success: true, student: newStudent.rows[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'حدث خطأ أثناء إضافة الطالب.' });
   }
 });
 
