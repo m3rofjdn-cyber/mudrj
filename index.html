@@ -31,24 +31,23 @@
       <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/30">مـ</div>
       <span class="text-2xl font-extrabold tracking-wide bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">مُدرَج</span>
     </div>
+    <div id="authNavButtons" class="flex items-center space-x-3 space-x-reverse bg-slate-900/60 p-1.5 rounded-xl border border-slate-800">
+      <button id="btnTabLogin" onclick="showTab('login')" class="px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md">تسجيل الدخول</button>
+      <button id="btnTabRegister" onclick="showTab('register')" class="px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all duration-200">إنشاء حساب</button>
+    </div>
   </header>
 
   <!-- Main Box -->
   <main class="max-w-md mx-auto w-full px-4 py-8 my-auto">
     <div class="glass-card p-8 rounded-3xl shadow-2xl relative">
       
-      <!-- تنبيهات -->
+      <!-- Alert Message Box -->
       <div id="alertBox" class="hidden mb-6 p-4 rounded-xl text-sm font-medium border text-center transition-all"></div>
 
-      <!-- واجهة تسجيل الدخول بـ Google -->
-      <div id="authSection" class="text-center space-y-6">
-        <div>
-          <h2 class="text-2xl font-bold">مرحباً بك في منصة مُدرج</h2>
-          <p class="text-slate-400 text-sm mt-2">سجل الدخول فوراً باستخدام حساب Google الخاص بك</p>
-        </div>
-
-        <!-- زر Google الرسمي -->
-        <div class="flex justify-center py-2">
+      <!-- قسم زر Google في الأعلى -->
+      <div id="googleAuthSection" class="space-y-4 text-center pb-4 border-b border-slate-800">
+        <p class="text-xs text-slate-400 font-medium">الدخول السريع بنقرة واحدة</p>
+        <div class="flex justify-center">
           <div id="g_id_onload"
                data-client_id="821921990770-822776a7seho4i8les9lbqjsnut2lv23.apps.googleusercontent.com"
                data-callback="handleCredentialResponse"
@@ -63,9 +62,58 @@
                data-logo_alignment="left">
           </div>
         </div>
+        <div class="relative flex py-2 items-center">
+          <div class="flex-grow border-t border-slate-800"></div>
+          <span class="flex-shrink mx-4 text-slate-500 text-xs">أو بالطريقة العادية</span>
+          <div class="flex-grow border-t border-slate-800"></div>
+        </div>
       </div>
 
-      <!-- لوحة التحكم بعد تسجيل الدخول -->
+      <!-- 1. نموذج تسجيل الدخول -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 mt-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">اسم الحساب أو البريد الإلكتروني</label>
+          <input type="text" id="loginId" required placeholder="admin@domain.com" class="w-full px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">كلمة المرور</label>
+          <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition">
+        </div>
+        <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-3.5 rounded-xl font-bold transition shadow-lg shadow-blue-600/30 flex items-center justify-center">
+          <span>دخول</span>
+        </button>
+      </form>
+
+      <!-- 2. نموذج إنشاء حساب عادي -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3 mt-4 hidden">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">الاسم الأول</label>
+            <input type="text" id="regFirstName" required class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">الاسم الأخير</label>
+            <input type="text" id="regLastName" required class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">اسم الحساب (Username)</label>
+          <input type="text" id="regUser" required class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">البريد الإلكتروني</label>
+          <input type="email" id="regEmail" required placeholder="example@mail.com" class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">كلمة المرور</label>
+          <input type="password" id="regPass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+        </div>
+        <button type="submit" id="regBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition shadow-lg shadow-blue-600/30">
+          إنشاء حساب
+        </button>
+      </form>
+
+      <!-- 3. لوحة التحكم بعد تسجيل الدخول -->
       <div id="dashboard" class="hidden text-center space-y-6 py-4">
         <div class="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
         <div>
@@ -107,34 +155,107 @@
       box.classList.remove('hidden');
     }
 
-    // دالة استلام الاستجابة من زر جوجل وإرسالها للسيرفر
-    async function handleCredentialResponse(response) {
-      showAlert('جاري التحقق من الحساب...', true);
+    function clearAlert() {
+      document.getElementById('alertBox').classList.add('hidden');
+    }
 
+    function showTab(type) {
+      clearAlert();
+      const isLogin = type === 'login';
+      document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+      document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+
+      document.getElementById('btnTabLogin').className = isLogin 
+        ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow-md transition-all'
+        : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
+
+      document.getElementById('btnTabRegister').className = !isLogin 
+        ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow-md transition-all'
+        : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
+    }
+
+    // الدخول عبر Google
+    async function handleCredentialResponse(response) {
+      showAlert('جاري التحقق من حساب Google...', true);
       try {
         const res = await fetch(`${API_URL}/api/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: response.credential })
         });
-
         const data = await res.json();
-
         if (data.success) {
           localStorage.setItem('userToken', data.token);
           localStorage.setItem('userName', data.user.firstName);
           showDashboard(data.user.firstName);
         } else {
-          showAlert(data.message || 'فشل تسجيل الدخول عبر Google');
+          showAlert(data.message);
         }
       } catch (err) {
-        showAlert('تعذر الاتصال بالسيرفر للتحقق من بيانات جوجل.');
+        showAlert('تعذر الاتصال بالسيرفر.');
+      }
+    }
+
+    // تسجيل الدخول العادي
+    async function handleLogin(e) {
+      e.preventDefault();
+      clearAlert();
+      try {
+        const res = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: document.getElementById('loginId').value,
+            password: document.getElementById('loginPass').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.setItem('userToken', data.token);
+          localStorage.setItem('userName', data.user.firstName);
+          showDashboard(data.user.firstName);
+        } else {
+          showAlert(data.message);
+        }
+      } catch (err) {
+        showAlert('تعذر تسجيل الدخول.');
+      }
+    }
+
+    // إنشاء حساب عادي
+    async function handleRegister(e) {
+      e.preventDefault();
+      clearAlert();
+      try {
+        const res = await fetch(`${API_URL}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: document.getElementById('regFirstName').value,
+            lastName: document.getElementById('regLastName').value,
+            username: document.getElementById('regUser').value,
+            email: document.getElementById('regEmail').value,
+            password: document.getElementById('regPass').value
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert(data.message, true);
+          setTimeout(() => showTab('login'), 1500);
+        } else {
+          showAlert(data.message);
+        }
+      } catch (err) {
+        showAlert('حدث خطأ أثناء إنشاء الحساب.');
       }
     }
 
     function showDashboard(name) {
-      document.getElementById('alertBox').classList.add('hidden');
-      document.getElementById('authSection').classList.add('hidden');
+      clearAlert();
+      document.getElementById('googleAuthSection').classList.add('hidden');
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('authNavButtons').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('welcomeUser').innerText = `أهلاً بك يا ${name} في نظام مُدرج. أنت الآن متصل بنجاح.`;
     }
