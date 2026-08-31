@@ -4,16 +4,19 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'modaraj_secret_key_123';
 
+// إعدادات البريد الإلكتروني (يمكنك وضعها هنا مباشرة أو قراءتها من Environment Variables)
+const EMAIL_USER = process.env.EMAIL_USER || 'your-email@gmail.com'; 
+const EMAIL_PASS = process.env.EMAIL_PASS || 'xxxx xxxx xxxx xxxx'; 
+
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// تقديم الملفات الثابتة (مثل index.html) من نفس المجلد
 app.use(express.static(__dirname));
 
 // فحص وجود رابط قاعدة البيانات
@@ -26,7 +29,16 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // مطلوب لاتصالات Render Postgres
+    rejectUnauthorized: false
+  }
+});
+
+// إعداد خدمة Nodemailer لإرسال الإيميلات
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS
   }
 });
 
@@ -56,12 +68,12 @@ initDb();
 
 // ------------------- المسارات (Routes) -------------------
 
-// 1. الصفحة الرئيسية (عرض index.html)
+// 1. عرض واجهة المستخدم index.html عند فتح الرابط الرئيسي
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 2. مسار إنشاء الحساب وتوليد الرمز OTP
+// 2. مسار إنشاء الحساب وتوليد وإرسال الرمز OTP
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, username, email, birthDate, password } = req.body;
 
@@ -73,26 +85,44 @@ app.post('/api/register', async (req, res) => {
     // توليد رمز OTP عشوائي من 6 أرقام
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // حفظ البيانات والرمز في قاعدة البيانات
     await pool.query(
       `INSERT INTO users (first_name, last_name, username, email, birth_date, password, otp_code) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [firstName, lastName, username, email, birthDate, password, otp]
     );
 
-    // طباعة الرمز في السجل (Log) على Render لمراجعته أثناء الاختبار
-    console.log(`[OTP Sent to ${email}]: ${otp}`);
+    // تجهيز وإرسال الإيميل
+    const mailOptions = {
+      from: `"منصة مُدرج" <${EMAIL_USER}>`,
+      to: email,
+      subject: 'رمز التحقق الخاص بك - منصة مُدرج',
+      html: `
+        <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; background-color: #0f172a; color: #ffffff; border-radius: 12px;">
+          <h2 style="color: #3b82f6; margin-bottom: 10px;">مرحباً بك في منصة مُدرج</h2>
+          <p style="font-size: 14px; color: #cbd5e1;">رمز التحقق الخاص بتفعيل حسابك هو:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #10b981; background: #1e293b; padding: 15px; text-align: center; border-radius: 8px; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p style="color: #64748b; font-size: 12px;">إذا لم تقم بطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بأمان.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[OTP Email Sent Successfully to ${email}]`);
 
     res.json({ 
       success: true, 
-      message: 'تم إنشاء الحساب بنجاح! أدخل رمز التحقق لتفعيله.', 
+      message: 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', 
       email 
     });
   } catch (err) {
     if (err.message.includes('unique constraint') || err.code === '23505') {
       return res.status(400).json({ success: false, message: 'اسم الحساب أو البريد الإلكتروني مُسجل مسبقاً.' });
     }
-    console.error(err);
-    res.status(500).json({ success: false, message: 'حدث خطأ في الخادم أثناء حفظ البيانات.' });
+    console.error("Register Error:", err);
+    res.status(500).json({ success: false, message: 'حدث خطأ في الخادم أثناء إنشاء الحساب.' });
   }
 });
 
@@ -120,7 +150,7 @@ app.post('/api/verify-otp', async (req, res) => {
       res.status(400).json({ success: false, message: 'رمز التحقق غير صحيح.' });
     }
   } catch (err) {
-    console.error(err);
+    console.error("Verify OTP Error:", err);
     res.status(500).json({ success: false, message: 'حدث خطأ أثناء التأكد من الرمز.' });
   }
 });
@@ -149,7 +179,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(403).json({ success: false, message: 'يرجى تفعيل الحساب أولاً بواسطة رمز التحقق.' });
     }
 
-    // إنشاء JWT Token لتثبيت تسجيل الدخول
+    // إنشاء JWT Token لتثبيت الجلسة
     const token = jwt.sign(
       { userId: user.id, username: user.username },
       JWT_SECRET,
@@ -168,7 +198,7 @@ app.post('/api/login', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error(err);
+    console.error("Login Error:", err);
     res.status(500).json({ success: false, message: 'حدث خطأ أثناء تسجيل الدخول.' });
   }
 });
