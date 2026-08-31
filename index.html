@@ -18,7 +18,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-blue-500 selection:text-white">
 
-  <!-- خلفية تفاعلية مشعة -->
+  <!-- خلفية تفاعلية -->
   <div class="fixed inset-0 -z-10 overflow-hidden">
     <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
     <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
@@ -95,7 +95,7 @@
           <input type="password" id="regPass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
         </div>
         <button type="submit" id="regBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-3.5 rounded-xl font-bold transition shadow-lg shadow-blue-600/30 flex items-center justify-center">
-          <span>التالي (إرسال رمز التحقق)</span>
+          <span id="regBtnText">التالي (إرسال رمز التحقق)</span>
         </button>
       </form>
 
@@ -103,7 +103,7 @@
       <form id="otpForm" onsubmit="handleVerifyOTP(event)" class="space-y-5 hidden text-center">
         <div>
           <h2 class="text-xl font-bold">إدخال رمز التحقق</h2>
-          <p class="text-xs text-slate-400 mt-2">تم إنشاء الرمز بنجاح. أدخل الرمز المكون من 6 أرقام للربط والتفعيل.</p>
+          <p class="text-xs text-slate-400 mt-2">تم إرسال الرمز إلى بريدك الإلكتروني. أدخل الرمز المكون من 6 أرقام لتفعيل الحساب.</p>
         </div>
         <input type="text" id="otpInput" maxlength="6" placeholder="000000" required class="w-full py-3.5 bg-slate-900/90 rounded-xl border border-blue-500/50 text-center tracking-[0.5em] text-2xl font-mono text-blue-400 focus:outline-none">
         <button type="submit" id="otpBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/30 flex items-center justify-center">
@@ -130,7 +130,6 @@
   </footer>
 
   <script>
-    // تحديد الرابط تلقائياً سواءً على Render أو المحلي
     const API_URL = window.location.origin.includes('localhost') 
       ? 'http://localhost:3000' 
       : window.location.origin;
@@ -179,6 +178,13 @@
     async function handleRegister(e) {
       e.preventDefault();
       clearAlert();
+
+      const btn = document.getElementById('regBtn');
+      const btnText = document.getElementById('regBtnText');
+      
+      btn.disabled = true;
+      btnText.innerText = 'جاري إرسال الرمز...';
+
       tempEmail = document.getElementById('regEmail').value;
 
       try {
@@ -194,7 +200,9 @@
             password: document.getElementById('regPass').value
           })
         });
+
         const data = await res.json();
+        
         if (data.success) {
           showAlert(data.message, true);
           document.getElementById('registerForm').classList.add('hidden');
@@ -203,7 +211,10 @@
           showAlert(data.message);
         }
       } catch (err) {
-        showAlert('فشل الاتصال بالسيرفر. تحقق من حالة Render.');
+        showAlert('فشل الاتصال بالسيرفر. تأكد من جودة الاتصال.');
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = 'التالي (إرسال رمز التحقق)';
       }
     }
 
