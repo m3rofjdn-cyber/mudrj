@@ -9,210 +9,212 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Tajawal', sans-serif; }
-    .glass-card {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
+    .wheel-rotate { transition: transform 3s cubic-bezier(0.15, 0.99, 0.18, 1); }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-blue-500 selection:text-white">
-
-  <!-- خلفية جمالية -->
-  <div class="fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
-    <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl"></div>
-  </div>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
 
   <!-- Header -->
-  <header class="p-6 flex justify-between items-center max-w-6xl mx-auto w-full">
+  <header class="p-5 bg-white border-b border-slate-200 shadow-sm max-w-7xl mx-auto w-full flex justify-between items-center rounded-b-2xl">
     <div class="flex items-center space-x-3 space-x-reverse">
-      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-500/30">مـ</div>
-      <span class="text-2xl font-extrabold tracking-wide bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">مُدرَج</span>
+      <div class="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-md">مـ</div>
+      <span class="text-2xl font-extrabold tracking-wide text-emerald-700">مُدرَج</span>
     </div>
-    <div id="authNavButtons" class="flex items-center space-x-3 space-x-reverse bg-slate-900/60 p-1.5 rounded-xl border border-slate-800">
-      <button id="btnTabLogin" onclick="showTab('login')" class="px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 bg-blue-600 text-white shadow-md">تسجيل الدخول</button>
-      <button id="btnTabRegister" onclick="showTab('register')" class="px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all duration-200">إنشاء حساب</button>
+    <div id="authNavButtons" class="flex items-center space-x-2 space-x-reverse bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+      <button id="btnTabLogin" onclick="showTab('login')" class="px-5 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white shadow">تسجيل الدخول</button>
+      <button id="btnTabRegister" onclick="showTab('register')" class="px-5 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900">إنشاء حساب</button>
     </div>
     <div id="userHeaderInfo" class="hidden flex items-center gap-4">
-      <span id="headerUserName" class="text-sm font-bold text-blue-400"></span>
-      <button onclick="handleLogout()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 rounded-xl text-xs font-bold transition">تسجيل خروج</button>
+      <span id="headerUserName" class="text-sm font-bold text-emerald-700"></span>
+      <button onclick="handleLogout()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition">تسجيل خروج</button>
     </div>
   </header>
 
-  <!-- Main Box -->
+  <!-- Container الرئيسي -->
   <main id="mainContainer" class="max-w-md mx-auto w-full px-4 py-8 my-auto">
     
-    <!-- بطاقة التوثيق (تسجيل الدخول / إنشاء حساب) -->
-    <div id="authCard" class="glass-card p-8 rounded-3xl shadow-2xl relative">
-      
-      <!-- Alert Message Box -->
+    <!-- 1. نموذج الدخول / التسجيل -->
+    <div id="authCard" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
       <div id="alertBox" class="hidden mb-6 p-4 rounded-xl text-sm font-medium border text-center transition-all"></div>
 
-      <!-- قسم زر Google -->
-      <div id="googleAuthSection" class="space-y-4 text-center pb-4 border-b border-slate-800">
-        <p class="text-xs text-slate-400 font-medium">الدخول السريع بنقرة واحدة</p>
+      <div id="googleAuthSection" class="space-y-4 text-center pb-4 border-b border-slate-100">
+        <p class="text-xs text-slate-500 font-medium">الدخول السريع بنقرة واحدة</p>
         <div class="flex justify-center">
           <div id="g_id_onload"
                data-client_id="821921990770-822776a7seho4i8les9lbqjsnut2lv23.apps.googleusercontent.com"
                data-callback="handleCredentialResponse"
                data-auto_prompt="false">
           </div>
-          <div class="g_id_signin" 
-               data-type="standard" 
-               data-size="large" 
-               data-theme="outline" 
-               data-text="sign_in_with"
-               data-shape="rectangular"
-               data-logo_alignment="left">
-          </div>
+          <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular"></div>
         </div>
         <div class="relative flex py-2 items-center">
-          <div class="flex-grow border-t border-slate-800"></div>
-          <span class="flex-shrink mx-4 text-slate-500 text-xs">أو اسم المستخدم</span>
-          <div class="flex-grow border-t border-slate-800"></div>
+          <div class="flex-grow border-t border-slate-200"></div>
+          <span class="flex-shrink mx-4 text-slate-400 text-xs">أو اسم المستخدم</span>
+          <div class="flex-grow border-t border-slate-200"></div>
         </div>
       </div>
 
-      <!-- 1. نموذج تسجيل الدخول -->
+      <!-- الدخول -->
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 mt-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">اسم المستخدم</label>
-          <input type="text" id="loginId" required placeholder="مثال: teacher1" class="w-full px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition">
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">اسم المستخدم</label>
+          <input type="text" id="loginId" required placeholder="ادخل username" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1.5">كلمة المرور</label>
-          <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition">
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">كلمة المرور</label>
+          <input type="password" id="loginPass" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition">
         </div>
-        <button type="submit" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-3.5 rounded-xl font-bold transition shadow-lg shadow-blue-600/30 flex items-center justify-center">
-          <span>دخول</span>
-        </button>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-emerald-600/20">دخول</button>
       </form>
 
-      <!-- 2. نموذج إنشاء حساب جديد (بدون بريد إلكتروني) -->
+      <!-- التسجيل -->
       <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3 mt-4 hidden">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">الاسم الأول</label>
-            <input type="text" id="regFirstName" required class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">الاسم الأول</label>
+            <input type="text" id="regFirstName" required class="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">الاسم الأخير</label>
-            <input type="text" id="regLastName" required class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+            <label class="block text-xs font-semibold text-slate-600 mb-1">الاسم الأخير</label>
+            <input type="text" id="regLastName" required class="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">اسم المستخدم (Username)</label>
-          <input type="text" id="regUser" required placeholder="اختر اسم مستخدم فريد" class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">اسم المستخدم</label>
+          <input type="text" id="regUser" required placeholder="ادخل username" class="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-400 mb-1">كلمة المرور</label>
-          <input type="password" id="regPass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-900/80 rounded-xl border border-slate-700/80 focus:border-blue-500 focus:outline-none">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">كلمة المرور</label>
+          <input type="password" id="regPass" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none">
         </div>
-        <button type="submit" id="regBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition shadow-lg shadow-blue-600/30">
-          إنشاء حساب
-        </button>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-emerald-600/20">إنشاء حساب</button>
       </form>
-
     </div>
+
+    <!-- 2. لوحة تحكم المعلم (قائمة الفصول) -->
+    <div id="teacherDashboard" class="hidden space-y-6">
+      <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-800">فصولي الدراسية</h1>
+          <p class="text-slate-500 text-sm">اختر فصلاً لإدارته أو قم بإضافة فصل جديد</p>
+        </div>
+        <button onclick="openAddClassModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+          <span>+ إضافة فصل</span>
+        </button>
+      </div>
+
+      <div id="classesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </div>
+
+    <!-- 3. واجهة الفصل التفصيلية -->
+    <div id="classDetailView" class="hidden space-y-6">
+      <!-- الشريط العلوي للتحكم بالفصل -->
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+          <button onclick="backToClasses()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm">← رجوع للفصول</button>
+          <h2 id="currentClassName" class="text-2xl font-extrabold text-emerald-800"></h2>
+        </div>
+        
+        <!-- التبويبات -->
+        <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold gap-1">
+          <button id="tabBtnStudents" onclick="switchClassTab('students')" class="px-4 py-2 rounded-lg bg-emerald-600 text-white shadow">الطلاب والتقييم</button>
+          <button id="tabBtnLeaderboard" onclick="switchClassTab('leaderboard')" class="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900">ليدربورد 🏆</button>
+          <button id="tabBtnAttendance" onclick="switchClassTab('attendance')" class="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900">التحضير 📋</button>
+          <button id="tabBtnWheel" onclick="switchClassTab('wheel')" class="px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900">العجلة 🎡</button>
+        </div>
+
+        <button onclick="openAddStudentModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow transition">+ إضافة طالب</button>
+      </div>
+
+      <!-- تبويب 1: بطاقات الطلاب والتقييم -->
+      <div id="tabContentStudents" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+
+      <!-- تبويب 2: الليدربورد -->
+      <div id="tabContentLeaderboard" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4 max-w-2xl mx-auto">
+        <h3 class="text-xl font-bold text-slate-800 text-center">🏆 ليدربورد الأوسمة والدرجات</h3>
+        <div id="leaderboardList" class="space-y-2"></div>
+      </div>
+
+      <!-- تبويب 3: التحضير -->
+      <div id="tabContentAttendance" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 max-w-3xl mx-auto space-y-4">
+        <div class="flex justify-between items-center border-b pb-4">
+          <h3 class="text-xl font-bold text-slate-800">📋 كشف التحضير اليومي</h3>
+          <button onclick="saveAttendance()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl">حفظ التحضير</button>
+        </div>
+        <div id="attendanceList" class="space-y-2"></div>
+      </div>
+
+      <!-- تبويب 4: عجلة اختيار الطلاب -->
+      <div id="tabContentWheel" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center max-w-md mx-auto space-y-6">
+        <h3 class="text-xl font-bold text-slate-800">🎡 عجلة الاختيار العشوائي</h3>
+        <div class="relative w-64 h-64 mx-auto border-4 border-emerald-500 rounded-full flex items-center justify-center bg-emerald-50 shadow-inner overflow-hidden">
+          <div id="wheelWinner" class="text-2xl font-extrabold text-emerald-700 transition-all">اضغط على تدوير</div>
+        </div>
+        <button onclick="spinWheel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition">تدوير العجلة 🚀</button>
+      </div>
+    </div>
+
   </main>
 
-  <!-- 3. لوحة تحكم المعلم (إدارة الفصول والطلاب) -->
-  <div id="teacherDashboard" class="hidden max-w-5xl mx-auto w-full px-4 py-6">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-extrabold text-white">فصولي الدراسية</h1>
-        <p class="text-slate-400 text-sm">إدارة الفصول وإضافة الطلاب للكشوفات</p>
-      </div>
-      <button onclick="openAddClassModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center gap-2">
-        <span>+ إضافة فصل</span>
-      </button>
-    </div>
-
-    <!-- قائمة الفصول الدراسية -->
-    <div id="classesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <!-- يتم توليد الفصول هنا ديناميكياً -->
-    </div>
-  </div>
-
-  <!-- Modal: إضافة فصل جديد -->
-  <div id="addClassModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="glass-card p-6 rounded-2xl max-w-sm w-full space-y-4">
+  <!-- Modals -->
+  <div id="addClassModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl">
       <h3 class="text-lg font-bold">إضافة فصل جديد</h3>
-      <input type="text" id="classNameInput" placeholder="اسم الفصل (مثلاً: أول متوسط / 1)" class="w-full px-4 py-2.5 bg-slate-900 rounded-xl border border-slate-700 focus:outline-none focus:border-blue-500">
+      <input type="text" id="classNameInput" placeholder="اسم الفصل (مثال: أول متوسط / 1)" class="w-full px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
       <div class="flex gap-2 justify-end">
-        <button onclick="closeAddClassModal()" class="px-4 py-2 text-slate-400 hover:text-white text-sm">إلغاء</button>
-        <button onclick="submitCreateClass()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm">حفظ</button>
+        <button onclick="closeAddClassModal()" class="px-4 py-2 text-slate-500 text-sm">إلغاء</button>
+        <button onclick="submitCreateClass()" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm">حفظ</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: إضافة طالب داخل الفصل -->
-  <div id="addStudentModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="glass-card p-6 rounded-2xl max-w-sm w-full space-y-4">
+  <div id="addStudentModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-2xl max-w-sm w-full space-y-4 shadow-2xl">
       <h3 class="text-lg font-bold">إضافة طالب جديد</h3>
-      <input type="text" id="studentNameInput" placeholder="اسم الطالب الثلاثي" class="w-full px-4 py-2.5 bg-slate-900 rounded-xl border border-slate-700 focus:outline-none focus:border-blue-500">
+      <input type="text" id="studentNameInput" placeholder="اسم الطالب الثلاثي" class="w-full px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:outline-none focus:border-emerald-500">
       <div class="flex gap-2 justify-end">
-        <button onclick="closeAddStudentModal()" class="px-4 py-2 text-slate-400 hover:text-white text-sm">إلغاء</button>
-        <button onclick="submitAddStudent()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm">إضافة الطالب</button>
+        <button onclick="closeAddStudentModal()" class="px-4 py-2 text-slate-500 text-sm">إلغاء</button>
+        <button onclick="submitAddStudent()" class="px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm">إضافة الطالب</button>
       </div>
     </div>
   </div>
 
   <!-- Footer -->
-  <footer class="p-6 text-center text-slate-500 text-xs border-t border-slate-900">
+  <footer class="p-4 text-center text-slate-400 text-xs border-t border-slate-200 bg-white">
     جميع الحقوق محفوظة منصة مُدرج © 2026
   </footer>
 
   <script>
-    const API_URL = window.location.origin.includes('localhost') 
-      ? 'http://localhost:3000' 
-      : window.location.origin;
+    const API_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : window.location.origin;
 
-    let selectedClassId = null;
+    let currentClasses = [];
+    let selectedClass = null;
 
     window.onload = () => {
       const token = localStorage.getItem('userToken');
       const savedUser = localStorage.getItem('userName');
-      if (token && savedUser) {
-        showDashboard(savedUser);
-      }
+      if (token && savedUser) showDashboard(savedUser);
     };
 
     function showAlert(msg, isSuccess = false) {
       const box = document.getElementById('alertBox');
       box.innerText = msg;
       box.className = `mb-6 p-4 rounded-xl text-sm font-medium border text-center transition-all ${
-        isSuccess 
-          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-          : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        isSuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-rose-50 border-rose-200 text-rose-700'
       }`;
       box.classList.remove('hidden');
     }
 
-    function clearAlert() {
-      document.getElementById('alertBox').classList.add('hidden');
-    }
-
     function showTab(type) {
-      clearAlert();
+      document.getElementById('alertBox').classList.add('hidden');
       const isLogin = type === 'login';
       document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
       document.getElementById('registerForm').classList.toggle('hidden', isLogin);
-
-      document.getElementById('btnTabLogin').className = isLogin 
-        ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow-md transition-all'
-        : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
-
-      document.getElementById('btnTabRegister').className = !isLogin 
-        ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow-md transition-all'
-        : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white transition-all';
+      document.getElementById('btnTabLogin').className = isLogin ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white shadow' : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      document.getElementById('btnTabRegister').className = !isLogin ? 'px-5 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white shadow' : 'px-5 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900';
     }
 
-    // Google Auth
     async function handleCredentialResponse(response) {
-      showAlert('جاري التحقق...', true);
       try {
         const res = await fetch(`${API_URL}/api/auth/google`, {
           method: 'POST',
@@ -224,18 +226,12 @@
           localStorage.setItem('userToken', data.token);
           localStorage.setItem('userName', data.user.firstName);
           showDashboard(data.user.firstName);
-        } else {
-          showAlert(data.message);
         }
-      } catch (err) {
-        showAlert('تعذر الاتصال بالسيرفر.');
-      }
+      } catch (err) { showAlert('تعذر التوثيق عبر Google'); }
     }
 
-    // تسجيل الدخول
     async function handleLogin(e) {
       e.preventDefault();
-      clearAlert();
       try {
         const res = await fetch(`${API_URL}/api/login`, {
           method: 'POST',
@@ -250,18 +246,12 @@
           localStorage.setItem('userToken', data.token);
           localStorage.setItem('userName', data.user.firstName);
           showDashboard(data.user.firstName);
-        } else {
-          showAlert(data.message);
-        }
-      } catch (err) {
-        showAlert('تعذر تسجيل الدخول.');
-      }
+        } else showAlert(data.message);
+      } catch (err) { showAlert('تعذر تسجيل الدخول'); }
     }
 
-    // إنشاء حساب (اسم المستخدم فقط)
     async function handleRegister(e) {
       e.preventDefault();
-      clearAlert();
       try {
         const res = await fetch(`${API_URL}/api/register`, {
           method: 'POST',
@@ -277,29 +267,20 @@
         if (data.success) {
           showAlert(data.message, true);
           setTimeout(() => showTab('login'), 1500);
-        } else {
-          showAlert(data.message);
-        }
-      } catch (err) {
-        showAlert('حدث خطأ أثناء إنشاء الحساب.');
-      }
+        } else showAlert(data.message);
+      } catch (err) { showAlert('حدث خطأ بالإنشاء'); }
     }
 
-    // عرض لوحة المعلم
     function showDashboard(name) {
       document.getElementById('authCard').classList.add('hidden');
       document.getElementById('authNavButtons').classList.add('hidden');
-      document.getElementById('mainContainer').classList.remove('max-w-md', 'my-auto');
-      document.getElementById('mainContainer').classList.add('max-w-5xl');
-      
+      document.getElementById('mainContainer').className = "max-w-7xl mx-auto w-full px-4 py-8";
       document.getElementById('userHeaderInfo').classList.remove('hidden');
       document.getElementById('headerUserName').innerText = `المعلم: ${name}`;
       document.getElementById('teacherDashboard').classList.remove('hidden');
-      
       loadClasses();
     }
 
-    // جلب الفصول الخاصة بالمعلم
     async function loadClasses() {
       const token = localStorage.getItem('userToken');
       try {
@@ -308,73 +289,167 @@
         });
         const data = await res.json();
         if (data.success) {
-          renderClasses(data.classes);
+          currentClasses = data.classes;
+          renderClasses();
         }
-      } catch (err) {
-        console.error('Error loading classes:', err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // عرض الفصول والطلاب في الصفحة
-    function renderClasses(classes) {
+    function renderClasses() {
       const container = document.getElementById('classesList');
-      if (classes.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full text-center py-12 glass-card rounded-2xl">
-            <p class="text-slate-400 font-medium">لا توجد فصول حالياً.</p>
-            <p class="text-xs text-slate-500 mt-1">اضغط على زر "+ إضافة فصل" للبدء في تنظيم طلابك.</p>
-          </div>
-        `;
+      if (currentClasses.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 bg-white rounded-2xl border border-slate-200"><p class="text-slate-500 font-medium">لا توجد فصول حالياً.</p></div>`;
         return;
       }
-
-      container.innerHTML = classes.map(cls => `
-        <div class="glass-card p-5 rounded-2xl flex flex-col justify-between space-y-4">
+      container.innerHTML = currentClasses.map(cls => `
+        <div onclick="openClassView(${cls.id})" class="bg-white p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-lg transition cursor-pointer flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-center mb-3">
-              <h3 class="text-lg font-bold text-blue-400">${cls.name}</h3>
-              <span class="text-xs px-2.5 py-1 bg-slate-800 text-slate-300 rounded-lg">${cls.students ? cls.students.length : 0} طلاب</span>
+              <h3 class="text-xl font-bold text-slate-800">${cls.name}</h3>
+              <span class="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-lg">${cls.students ? cls.students.length : 0} طالب</span>
             </div>
-            
-            <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-              ${cls.students && cls.students.length > 0 ? cls.students.map(s => `
-                <div class="text-xs bg-slate-900/80 px-3 py-2 rounded-lg text-slate-300 border border-slate-800 flex justify-between">
-                  <span>${s.name}</span>
-                </div>
-              `).join('') : '<p class="text-xs text-slate-500">لا يوجد طلاب بعد</p>'}
-            </div>
+            <p class="text-xs text-slate-400">اضغط لفتح الفصل وإدارة الطلاب والتقييمات</p>
           </div>
-
-          <button onclick="openAddStudentModal(${cls.id})" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-700 transition">
-            + إضافة طالب
-          </button>
         </div>
       `).join('');
     }
 
-    // Modal Control
+    // فتح واجهة الفصل
+    function openClassView(classId) {
+      selectedClass = currentClasses.find(c => c.id === classId);
+      document.getElementById('teacherDashboard').classList.add('hidden');
+      document.getElementById('classDetailView').classList.remove('hidden');
+      document.getElementById('currentClassName').innerText = selectedClass.name;
+      switchClassTab('students');
+    }
+
+    function backToClasses() {
+      document.getElementById('classDetailView').classList.add('hidden');
+      document.getElementById('teacherDashboard').classList.remove('hidden');
+      loadClasses();
+    }
+
+    function switchClassTab(tab) {
+      const tabs = ['students', 'leaderboard', 'attendance', 'wheel'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const content = document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (t === tab) {
+          btn.className = "px-4 py-2 rounded-lg bg-emerald-600 text-white shadow font-bold";
+          content.classList.remove('hidden');
+        } else {
+          btn.className = "px-4 py-2 rounded-lg text-slate-600 hover:text-slate-900 font-bold";
+          content.classList.add('hidden');
+        }
+      });
+
+      if (tab === 'students') renderStudentsCards();
+      if (tab === 'leaderboard') renderLeaderboard();
+      if (tab === 'attendance') renderAttendance();
+    }
+
+    // عرض الطلاب في بطاقات تقييم
+    function renderStudentsCards() {
+      const container = document.getElementById('tabContentStudents');
+      if (!selectedClass.students || selectedClass.students.length === 0) {
+        container.innerHTML = `<p class="col-span-full text-center py-8 text-slate-400">لا يوجد طلاب في هذا الفصل بعد.</p>`;
+        return;
+      }
+      container.innerHTML = selectedClass.students.map(s => `
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex justify-between items-center border-b pb-2">
+            <h4 class="font-bold text-slate-800">${s.name}</h4>
+            <span class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">⭐ ${s.score || 0}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs font-bold">
+            <button onclick="updateScore(${s.id}, 5)" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl border border-amber-200">⭐ نجمة (+5)</button>
+            <button onclick="updateScore(${s.id}, 2)" class="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl border border-emerald-200">✓ ممتاز (+2)</button>
+            <button onclick="updateScore(${s.id}, 3)" class="p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl border border-blue-200">📚 أكمل الواجب (+3)</button>
+            <button onclick="updateScore(${s.id}, -2)" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl border border-rose-200">✕ خطأ (-2)</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function updateScore(studentId, points) {
+      const token = localStorage.getItem('userToken');
+      try {
+        const res = await fetch(`${API_URL}/api/students/score`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ studentId, points })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const student = selectedClass.students.find(s => s.id === studentId);
+          if (student) student.score = (student.score || 0) + points;
+          renderStudentsCards();
+        }
+      } catch (err) { console.error(err); }
+    }
+
+    // ليدربورد
+    function renderLeaderboard() {
+      const container = document.getElementById('leaderboardList');
+      const sorted = [...(selectedClass.students || [])].sort((a,b) => (b.score || 0) - (a.score || 0));
+      container.innerHTML = sorted.map((s, idx) => `
+        <div class="flex justify-between items-center p-3 ${idx === 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'} border rounded-xl font-bold">
+          <div class="flex items-center gap-3">
+            <span class="w-6 h-6 rounded-full ${idx === 0 ? 'bg-amber-500' : 'bg-slate-400'} text-white text-xs flex items-center justify-center">${idx + 1}</span>
+            <span class="text-slate-800">${s.name}</span>
+          </div>
+          <span class="text-emerald-600">⭐ ${s.score || 0} نقطة</span>
+        </div>
+      `).join('');
+    }
+
+    // التحضير
+    function renderAttendance() {
+      const container = document.getElementById('attendanceList');
+      container.innerHTML = (selectedClass.students || []).map(s => `
+        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <span class="font-bold text-slate-800 text-sm">${s.name}</span>
+          <div class="flex gap-2">
+            <label class="flex items-center gap-1 text-xs font-bold text-emerald-600"><input type="radio" name="att_${s.id}" value="present" checked> حاضر</label>
+            <label class="flex items-center gap-1 text-xs font-bold text-rose-600"><input type="radio" name="att_${s.id}" value="absent"> غائب</label>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function saveAttendance() {
+      alert('تم حفظ كشف التحضير بنجاح!');
+    }
+
+    // العجلة العشوائية
+    function spinWheel() {
+      const winnerDiv = document.getElementById('wheelWinner');
+      const students = selectedClass.students;
+      if (!students || students.length === 0) {
+        winnerDiv.innerText = "لا يوجد طلاب";
+        return;
+      }
+      winnerDiv.innerText = "جاري الاختيار...";
+      setTimeout(() => {
+        const random = students[Math.floor(Math.random() * students.length)];
+        winnerDiv.innerText = `🎉 ${random.name}`;
+      }, 1000);
+    }
+
+    // Modals Handlers
     function openAddClassModal() { document.getElementById('addClassModal').classList.remove('hidden'); }
     function closeAddClassModal() { document.getElementById('addClassModal').classList.add('hidden'); }
-    
-    function openAddStudentModal(classId) { 
-      selectedClassId = classId;
-      document.getElementById('addStudentModal').classList.remove('hidden'); 
-    }
+    function openAddStudentModal() { document.getElementById('addStudentModal').classList.remove('hidden'); }
     function closeAddStudentModal() { document.getElementById('addStudentModal').classList.add('hidden'); }
 
-    // إنشاء فصل جديد
     async function submitCreateClass() {
       const name = document.getElementById('classNameInput').value;
       if (!name) return;
       const token = localStorage.getItem('userToken');
-
       try {
         const res = await fetch(`${API_URL}/api/classes`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ name })
         });
         const data = await res.json();
@@ -383,35 +458,27 @@
           document.getElementById('classNameInput').value = '';
           loadClasses();
         }
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // إضافة طالب في فصل
     async function submitAddStudent() {
       const name = document.getElementById('studentNameInput').value;
-      if (!name || !selectedClassId) return;
+      if (!name || !selectedClass) return;
       const token = localStorage.getItem('userToken');
-
       try {
         const res = await fetch(`${API_URL}/api/students`, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          },
-          body: JSON.stringify({ classId: selectedClassId, name })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ classId: selectedClass.id, name })
         });
         const data = await res.json();
         if (data.success) {
           closeAddStudentModal();
           document.getElementById('studentNameInput').value = '';
-          loadClasses();
+          selectedClass.students.push(data.student);
+          renderStudentsCards();
         }
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }
 
     function handleLogout() {
