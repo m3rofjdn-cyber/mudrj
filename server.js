@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
-const jwt = require('jwt-simple');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
@@ -17,13 +17,11 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '821921990770-822776a7s
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// الاتصال بقاعدة البيانات PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// إنشاء الجداول في حال عدم وجودها
 async function initDB() {
   try {
     await pool.query(`
@@ -56,22 +54,18 @@ async function initDB() {
 }
 initDB();
 
-// Middleware للتحقق من التوكن
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ success: false, message: 'غير مصرح لك، يرجى تسجيل الدخول' });
 
-  try {
-    const decoded = jwt.decode(token, JWT_SECRET);
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ success: false, message: 'الجلسة انتهت، يرجى إعادة الدخول' });
     req.user = decoded;
     next();
-  } catch (err) {
-    return res.status(403).json({ success: false, message: 'الجلسة انتهت، يرجى إعادة الدخول' });
-  }
+  });
 };
 
-// 1. تسجيل عادي
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, username, password } = req.body;
   if (!username || !password) return res.status(400).json({ success: false, message: 'جميع الحقول مطلوبة' });
@@ -94,7 +88,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 2. دخول عادي
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -105,14 +98,13 @@ app.post('/api/login', async (req, res) => {
     const validPass = await bcrypt.compare(password, user.password || '');
     if (!validPass) return res.status(400).json({ success: false, message: 'كلمة المرور خاطئة' });
 
-    const token = jwt.encode({ userId: user.id, username: user.username }, JWT_SECRET);
+    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ success: true, token, user: { firstName: user.first_name, username: user.username } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// 3. توثيق قوقل
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false, message: 'التوكن مفقود' });
@@ -142,14 +134,13 @@ app.post('/api/auth/google', async (req, res) => {
       user = result.rows[0];
     }
 
-    const jwtToken = jwt.encode({ userId: user.id, username: user.username }, JWT_SECRET);
+    const jwtToken = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ success: true, token: jwtToken, user: { firstName: user.first_name, username: user.username } });
   } catch (err) {
     res.status(401).json({ success: false, message: `فشل التوثيق عبر قوقل: ${err.message}` });
   }
 });
 
-// 4. جلب الفصول والطلاب
 app.get('/api/classes', authenticateToken, async (req, res) => {
   try {
     const classesRes = await pool.query('SELECT * FROM classes WHERE user_id = $1 ORDER BY id DESC', [req.user.userId]);
@@ -166,7 +157,6 @@ app.get('/api/classes', authenticateToken, async (req, res) => {
   }
 });
 
-// 5. إضافة فصل جديد
 app.post('/api/classes', authenticateToken, async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ success: false, message: 'اسم الفصل مطلوب' });
@@ -182,7 +172,6 @@ app.post('/api/classes', authenticateToken, async (req, res) => {
   }
 });
 
-// 6. إضافة طالب
 app.post('/api/students', authenticateToken, async (req, res) => {
   const { classId, name } = req.body;
   if (!classId || !name) return res.status(400).json({ success: false, message: 'جميع البيانات مطلوبة' });
@@ -198,7 +187,6 @@ app.post('/api/students', authenticateToken, async (req, res) => {
   }
 });
 
-// 7. تحديث درجات الطالب
 app.post('/api/students/score', authenticateToken, async (req, res) => {
   const { studentId, points } = req.body;
   try {
