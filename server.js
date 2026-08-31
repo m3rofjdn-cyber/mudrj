@@ -27,7 +27,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// إنشاء الجداول في قاعدة البيانات
 const initDb = async () => {
   try {
     await pool.query(`
@@ -63,26 +62,23 @@ const initDb = async () => {
 };
 initDb();
 
-// Middleware للتحقق من التوكن المعطى للمعلم
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ success: false, message: 'غير مصرح.' });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ success: false, message: 'الجلسة انتهت، اعد تسجيل الدخول.' });
+    if (err) return res.status(403).json({ success: false, message: 'الجلسة انتهت، أعد تسجيل الدخول.' });
     req.user = user;
     next();
   });
 };
 
-// ------------------- المسارات (Routes) -------------------
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 1. Google Auth
+// Google Auth API
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false, message: 'التوكن مطلوب' });
@@ -113,7 +109,7 @@ app.post('/api/auth/google', async (req, res) => {
   }
 });
 
-// 2. إنشاء حساب باسم المستخدم
+// التسجيل والدخول
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, username, password } = req.body;
   if (!firstName || !lastName || !username || !password) return res.status(400).json({ success: false, message: 'جميع الحقول مطلوبة.' });
@@ -129,7 +125,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 3. تسجيل الدخول
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ success: false, message: 'يرجى إدخال البيانات.' });
@@ -146,7 +141,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 4. جلب الفصول الخاصة بالمعلم
+// إدارة الفصول والطلاب
 app.get('/api/classes', authenticateToken, async (req, res) => {
   try {
     const classesRes = await pool.query('SELECT * FROM classes WHERE teacher_id = $1 ORDER BY id DESC', [req.user.userId]);
@@ -158,7 +153,6 @@ app.get('/api/classes', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: 'خطأ أثناء جلب البيانات.' }); }
 });
 
-// 5. إضافة فصل جديد
 app.post('/api/classes', authenticateToken, async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ success: false, message: 'اسم الفصل مطلوب.' });
@@ -167,12 +161,10 @@ app.post('/api/classes', authenticateToken, async (req, res) => {
     const newClass = await pool.query('INSERT INTO classes (teacher_id, name) VALUES ($1, $2) RETURNING *', [req.user.userId, name]);
     res.json({ success: true, class: newClass.rows[0] });
   } catch (err) { 
-    console.error("Add Class Error:", err);
     res.status(500).json({ success: false, message: 'خطأ أثناء إضافة الفصل.' }); 
   }
 });
 
-// 6. إضافة طالب جديد
 app.post('/api/students', authenticateToken, async (req, res) => {
   const { classId, name } = req.body;
   if (!classId || !name) return res.status(400).json({ success: false, message: 'بيانات غير مكتملة.' });
@@ -181,12 +173,10 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const newStudent = await pool.query('INSERT INTO students (class_id, name, score) VALUES ($1, $2, 0) RETURNING *', [classId, name]);
     res.json({ success: true, student: newStudent.rows[0] });
   } catch (err) { 
-    console.error("Add Student Error:", err);
     res.status(500).json({ success: false, message: 'خطأ أثناء إضافة الطالب.' }); 
   }
 });
 
-// 7. تحديث درجة الطالب
 app.post('/api/students/score', authenticateToken, async (req, res) => {
   const { studentId, points } = req.body;
   if (!studentId || points === undefined) return res.status(400).json({ success: false, message: 'البيانات غير مكتملة.' });
