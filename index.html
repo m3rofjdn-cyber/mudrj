@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مُدرج - نظام إدارة الكشوفات</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style> body { font-family: 'Tajawal', sans-serif; } </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="p-6 flex justify-between items-center max-w-6xl mx-auto w-full">
+    <div class="text-3xl font-bold text-blue-500">مُدرَج</div>
+    <div id="authButtons" class="space-x-4 space-x-reverse">
+      <button onclick="showTab('login')" class="px-4 py-2 text-slate-300">تسجيل الدخول</button>
+      <button onclick="showTab('register')" class="px-4 py-2 bg-blue-600 text-white rounded-lg">إنشاء حساب</button>
+    </div>
+  </header>
+
+  <!-- Main Box -->
+  <main class="max-w-md mx-auto w-full p-6 bg-slate-800 rounded-2xl border border-slate-700 my-auto">
+    
+    <!-- 1. نموذج تسجيل الدخول -->
+    <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+      <h2 class="text-2xl font-bold text-center mb-4">تسجيل الدخول</h2>
+      <input type="text" id="loginId" placeholder="البريد أو اسم الحساب" required class="w-full p-3 bg-slate-900 rounded-lg border border-slate-700">
+      <input type="password" id="loginPass" placeholder="كلمة المرور" required class="w-full p-3 bg-slate-900 rounded-lg border border-slate-700">
+      <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg font-bold">دخول</button>
+    </form>
+
+    <!-- 2. نموذج إنشاء حساب -->
+    <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+      <h2 class="text-2xl font-bold text-center mb-4">إنشاء حساب جديد</h2>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="text" id="regFirstName" placeholder="الاسم الأول" required class="p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+        <input type="text" id="regLastName" placeholder="الاسم الأخير" required class="p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+      </div>
+      <input type="text" id="regUser" placeholder="اسم الحساب" required class="w-full p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+      <input type="email" id="regEmail" placeholder="البريد الإلكتروني" required class="w-full p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+      <input type="date" id="regBirth" required class="w-full p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+      <input type="password" id="regPass" placeholder="كلمة المرور" required class="w-full p-2.5 bg-slate-900 rounded-lg border border-slate-700">
+      <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg font-bold">التالي (إرسال الرمز)</button>
+    </form>
+
+    <!-- 3. شاشة إدخال OTP -->
+    <form id="otpForm" onsubmit="handleVerifyOTP(event)" class="space-y-4 hidden text-center">
+      <h2 class="text-xl font-bold">ادخل رمز التحقق (OTP)</h2>
+      <p class="text-sm text-slate-400">تم تفقد الرمز في مبنى السيرفر / الإيميل</p>
+      <input type="text" id="otpInput" maxlength="6" placeholder="123456" required class="w-full p-3 bg-slate-900 rounded-lg border border-slate-700 text-center tracking-widest text-2xl">
+      <button type="submit" class="w-full bg-green-600 py-3 rounded-lg font-bold">تأكيد الرمز</button>
+    </form>
+
+    <!-- 4. لوحة التحكم بعد تسجيل الدخول الناجح -->
+    <div id="dashboard" class="hidden text-center space-y-4">
+      <h2 class="text-2xl font-bold text-green-400">نجحت في تسجيل الدخول!</h2>
+      <p id="welcomeUser" class="text-slate-300"></p>
+      <button onclick="handleLogout()" class="w-full bg-red-600 py-3 rounded-lg font-bold">تسجيل خروج</button>
+    </div>
+
+  </main>
+
+  <script>
+    const API_URL = 'http://localhost:3000'; // استبدله بـ رابط Render الخاص بك
+    let tempEmail = '';
+
+    // التحقق الفوري من الجلسة عند فتح الصفحة (يمنع الخروج عند الإنعاش)
+    window.onload = () => {
+      const token = localStorage.getItem('userToken');
+      const savedUser = localStorage.getItem('userName');
+      if (token && savedUser) {
+        showDashboard(savedUser);
+      }
+    };
+
+    function showTab(type) {
+      document.getElementById('loginForm').classList.toggle('hidden', type !== 'login');
+      document.getElementById('registerForm').classList.toggle('hidden', type !== 'register');
+      document.getElementById('otpForm').classList.add('hidden');
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      tempEmail = document.getElementById('regEmail').value;
+      const res = await fetch(`${API_URL}/api/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: document.getElementById('regFirstName').value,
+          lastName: document.getElementById('regLastName').value,
+          username: document.getElementById('regUser').value,
+          email: tempEmail,
+          birthDate: document.getElementById('regBirth').value,
+          password: document.getElementById('regPass').value
+        })
+      });
+      const data = await res.json();
+      alert(data.message);
+      if (data.success) {
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('otpForm').classList.remove('hidden');
+      }
+    }
+
+    async function handleVerifyOTP(e) {
+      e.preventDefault();
+      const res = await fetch(`${API_URL}/api/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: tempEmail, otp: document.getElementById('otpInput').value })
+      });
+      const data = await res.json();
+      alert(data.message);
+      if (data.success) showTab('login');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const res = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: document.getElementById('loginId').value,
+          password: document.getElementById('loginPass').value
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // حفظ التوكن والجلسة لتظل مسجلاً دائماً
+        localStorage.setItem('userToken', data.token);
+        localStorage.setItem('userName', data.user.firstName);
+        showDashboard(data.user.firstName);
+      } else {
+        alert(data.message);
+      }
+    }
+
+    function showDashboard(name) {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.getElementById('otpForm').classList.add('hidden');
+      document.getElementById('authButtons').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      document.getElementById('welcomeUser').innerText = `أهلاً بك يا ${name} في نظام مُدرج.`;
+    }
+
+    function handleLogout() {
+      // حذف التوكن عند الخروج فقط
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('userName');
+      location.reload();
+    }
+  </script>
+</body>
+</html>
