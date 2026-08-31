@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'modaraj_secret_key_123';
 
-// إعدادات البريد الإلكتروني (يمكنك وضعها هنا مباشرة أو قراءتها من Environment Variables)
+// إعدادات البريد الإلكتروني
 const EMAIL_USER = process.env.EMAIL_USER || 'your-email@gmail.com'; 
 const EMAIL_PASS = process.env.EMAIL_PASS || 'xxxx xxxx xxxx xxxx'; 
 
@@ -73,7 +73,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 2. مسار إنشاء الحساب وتوليد وإرسال الرمز OTP
+// 2. مسار إنشاء الحساب وتوليد وإرسال الرمز OTP (معدّل للتعامل مع الحسابات غير المفعّلة)
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, username, email, birthDate, password } = req.body;
 
@@ -82,15 +82,37 @@ app.post('/api/register', async (req, res) => {
   }
 
   try {
-    // توليد رمز OTP عشوائي من 6 أرقام
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // حفظ البيانات والرمز في قاعدة البيانات
-    await pool.query(
-      `INSERT INTO users (first_name, last_name, username, email, birth_date, password, otp_code) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [firstName, lastName, username, email, birthDate, password, otp]
+    // التحقق هل الحساب أو الإيميل موجود مسبقاً
+    const existingUser = await pool.query(
+      'SELECT * FROM users WHERE email = $1 OR username = $2',
+      [email, username]
     );
+
+    if (existingUser.rows.length > 0) {
+      const user = existingUser.rows[0];
+
+      // إذا كان الحساب موجوداً ومفعّلاً بالفعل
+      if (user.is_verified) {
+        return res.status(400).json({ success: false, message: 'اسم الحساب أو البريد الإلكتروني مُسجل ومفعّل مسبقاً.' });
+      }
+
+      // إذا كان الحساب موجوداً ولكن غير مفعّل، يتم تحديث بياناته وإعادة إرسال الرمز الجديد
+      await pool.query(
+        `UPDATE users 
+         SET first_name = $1, last_name = $2, username = $3, birth_date = $4, password = $5, otp_code = $6 
+         WHERE email = $7 OR username = $3`,
+        [firstName, lastName, username, birthDate, password, otp, email]
+      );
+    } else {
+      // إدخال حساب جديد تماماً
+      await pool.query(
+        `INSERT INTO users (first_name, last_name, username, email, birth_date, password, otp_code) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [firstName, lastName, username, email, birthDate, password, otp]
+      );
+    }
 
     // تجهيز وإرسال الإيميل
     const mailOptions = {
@@ -114,13 +136,10 @@ app.post('/api/register', async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: 'تم إنشاء الحساب بنجاح! تم إرسال رمز التحقق إلى بريدك الإلكتروني.', 
+      message: 'تم إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح.', 
       email 
     });
   } catch (err) {
-    if (err.message.includes('unique constraint') || err.code === '23505') {
-      return res.status(400).json({ success: false, message: 'اسم الحساب أو البريد الإلكتروني مُسجل مسبقاً.' });
-    }
     console.error("Register Error:", err);
     res.status(500).json({ success: false, message: 'حدث خطأ في الخادم أثناء إنشاء الحساب.' });
   }
