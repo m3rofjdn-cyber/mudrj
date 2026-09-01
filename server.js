@@ -103,11 +103,21 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS stars INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS corrects INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS wrongs INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS homeworks INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+
+    const classIdColumn = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'students' AND column_name = 'class_id';
+    `);
+    if (classIdColumn.rows.length === 0) {
+      await pool.query(`ALTER TABLE students ADD COLUMN class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE;`);
+      console.log('تم إضافة عمود class_id الناقص لجدول students.');
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS attendance (
