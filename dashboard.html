@@ -3,75 +3,304 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مُدرَج — لوحة التحكم</title>
+<title>مُدرَج — فصولي</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#16213E; --gold:#C9922B; --paper:#F7F4EC;
-    --text:#20242E; --text-mute:#5B6472; --line:#E4DFD1;
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F; --ok-bg:#E9F4EC;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    font-family:'IBM Plex Sans Arabic', sans-serif;
-    background:var(--paper); color:var(--text);
-    min-height:100vh;
-  }
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+
   header{
     background:var(--ink); color:#fff;
-    padding:18px 32px;
-    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 32px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:20;
   }
   .mark{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:18px; }
   .mark .dot{ width:10px; height:10px; border-radius:3px; background:var(--gold); }
-  .logout{
-    background:none; border:1px solid rgba(255,255,255,0.25);
-    color:#fff; padding:8px 16px; border-radius:8px;
-    font-family:inherit; font-size:13.5px; cursor:pointer;
+  .head-actions{ display:flex; align-items:center; gap:14px; }
+  .head-btn{
+    background:none; border:1px solid rgba(255,255,255,0.25); color:#fff;
+    padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13.5px; cursor:pointer;
   }
-  .logout:hover{ background:rgba(255,255,255,0.08); }
-  main{
-    max-width:640px; margin:64px auto; padding:0 24px; text-align:center;
+  .head-btn:hover{ background:rgba(255,255,255,0.08); }
+  .head-btn.primary{ background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:600; }
+  .head-btn.primary:hover{ background:var(--gold-soft); }
+
+  main{ max-width:1080px; margin:0 auto; padding:36px 24px 80px; }
+  .page-title{ font-size:22px; font-weight:600; margin-bottom:4px; }
+  .page-sub{ color:var(--text-mute); font-size:14px; font-weight:300; margin-bottom:28px; }
+
+  .empty{
+    text-align:center; padding:64px 24px; background:var(--card);
+    border:1px dashed var(--line); border-radius:14px; color:var(--text-mute);
   }
-  .welcome-title{ font-size:26px; font-weight:600; margin-bottom:10px; }
-  .welcome-sub{ color:var(--text-mute); font-size:15px; font-weight:300; }
-  .card{
-    margin-top:36px; background:#fff; border:1px solid var(--line);
-    border-radius:14px; padding:28px; text-align:right;
+  .empty p{ margin-top:8px; font-size:13.5px; font-weight:300; }
+
+  .stage-block{ margin-bottom:32px; }
+  .stage-title{ font-size:15px; font-weight:600; color:var(--ink); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .stage-title .bar{ width:4px; height:16px; background:var(--gold); border-radius:2px; }
+
+  .classes-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    gap:14px;
   }
-  .card h2{ font-size:15px; font-weight:600; margin-bottom:12px; }
-  .card p{ color:var(--text-mute); font-size:13.5px; font-weight:300; line-height:1.8; }
+  .class-card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:18px; cursor:pointer; transition:border-color .15s ease, transform .1s ease;
+    position:relative;
+  }
+  .class-card:hover{ border-color:var(--ink-soft); transform:translateY(-2px); }
+  .class-card .cname{ font-size:15.5px; font-weight:600; margin-bottom:6px; }
+  .class-card .cmeta{ font-size:12.5px; color:var(--text-mute); font-weight:300; }
+  .class-card .cavg{
+    margin-top:12px; display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--ink); background:var(--paper); padding:4px 10px; border-radius:20px;
+  }
+  .class-card .cavg .gold-dot{ width:6px; height:6px; border-radius:50%; background:var(--gold); }
+  .class-del{
+    position:absolute; top:14px; left:14px; background:none; border:none;
+    color:var(--text-mute); font-size:16px; cursor:pointer; opacity:0; transition:opacity .15s;
+  }
+  .class-card:hover .class-del{ opacity:1; }
+  .class-del:hover{ color:var(--danger); }
+
+  /* ===== نافذة إضافة فصل ===== */
+  .overlay{
+    display:none; position:fixed; inset:0; background:rgba(22,33,62,0.45);
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--card); border-radius:16px; padding:28px; width:100%; max-width:400px;
+    box-shadow:0 30px 60px -20px rgba(22,33,62,0.4);
+  }
+  .modal h2{ font-size:18px; font-weight:600; margin-bottom:4px; }
+  .modal .msub{ font-size:13px; color:var(--text-mute); font-weight:300; margin-bottom:20px; }
+
+  .choice-row{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .choice{
+    flex:1; min-width:80px; text-align:center; padding:10px 8px; border:1px solid var(--line);
+    border-radius:9px; font-size:13.5px; cursor:pointer; background:var(--paper); transition:all .15s ease;
+  }
+  .choice.selected{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12.5px; font-weight:500; color:var(--text-mute); margin-bottom:6px; }
+  .field input{
+    width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:9px;
+    font-family:inherit; font-size:14px; background:var(--paper);
+  }
+  .field input:focus{ outline:none; border-color:var(--ink-soft); }
+
+  .modal-actions{ display:flex; gap:10px; margin-top:8px; }
+  .btn-primary{
+    flex:1; padding:12px; border:none; border-radius:9px; background:var(--ink); color:#fff;
+    font-family:inherit; font-size:14.5px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary:disabled{ opacity:0.7; }
+  .btn-ghost{
+    padding:12px 18px; border:1px solid var(--line); border-radius:9px; background:none;
+    font-family:inherit; font-size:14.5px; cursor:pointer; color:var(--text-mute);
+  }
+
+  .alert{
+    display:none; padding:11px 14px; border-radius:9px; font-size:13px; margin-bottom:16px; font-weight:500;
+  }
+  .alert.show{ display:block; }
+  .alert.error{ background:var(--danger-bg); color:var(--danger); }
+
+  .spinner{ width:15px; height:15px; border-radius:50%; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; animation:spin .7s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .skeleton{ background:linear-gradient(90deg, #EFE9DA 25%, #F7F4EC 37%, #EFE9DA 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:12px; height:96px; }
+  @keyframes shimmer{ 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
 </style>
 </head>
 <body>
-  <header>
-    <div class="mark"><span class="dot"></span><span>مُدرَج</span></div>
-    <button class="logout" onclick="logout()">تسجيل الخروج</button>
-  </header>
-  <main>
-    <div class="welcome-title" id="welcomeTitle">أهلاً بك</div>
-    <div class="welcome-sub">تم تسجيل الدخول بنجاح والجلسة متصلة بالسيرفر وقاعدة البيانات.</div>
-    <div class="card">
-      <h2>هذه صفحة مؤقتة</h2>
-      <p>هذي نقطة انطلاق بعد تسجيل الدخول. من هنا تقدر تبني صفحات الفصول والطلاب والدرجات فوق نفس نظام الجلسة (التوكن) الشغال حاليًا.</p>
+
+<header>
+  <div class="mark"><span class="dot"></span><span>مُدرَج</span></div>
+  <div class="head-actions">
+    <button class="head-btn" onclick="location.href='/leaderboard.html'">🏆 الترتيب العام</button>
+    <button class="head-btn primary" onclick="openModal()">+ فصل جديد</button>
+    <button class="head-btn" onclick="logout()">خروج</button>
+  </div>
+</header>
+
+<main>
+  <div class="page-title" id="welcomeTitle">فصولي</div>
+  <div class="page-sub">اختر فصل لإدارة طلابه، أو أضف فصل جديد.</div>
+
+  <div id="content">
+    <div class="classes-grid">
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
     </div>
-  </main>
+  </div>
+</main>
+
+<!-- نافذة إضافة فصل -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>فصل جديد</h2>
+    <div class="msub">حدد المرحلة والصف والشعبة</div>
+
+    <div class="alert" id="modalAlert"></div>
+
+    <div class="field">
+      <label>المرحلة</label>
+      <div class="choice-row" id="stageRow">
+        <div class="choice" data-stage="ابتدائي" onclick="selectStage('ابتدائي')">ابتدائي</div>
+        <div class="choice" data-stage="متوسط" onclick="selectStage('متوسط')">متوسط</div>
+        <div class="choice" data-stage="ثانوي" onclick="selectStage('ثانوي')">ثانوي</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>الصف</label>
+      <div class="choice-row" id="gradeRow"></div>
+    </div>
+
+    <div class="field">
+      <label>رقم الشعبة</label>
+      <input id="sectionInput" type="number" min="1" max="8" placeholder="من ١ إلى ٨">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">إلغاء</button>
+      <button class="btn-primary" id="createBtn" onclick="createClass()">
+        <span id="createBtnText">إنشاء الفصل</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <script>
+  const GRADE_NAMES = { 'ابتدائي': ['الأول','الثاني','الثالث','الرابع','الخامس','السادس'], 'متوسط': ['الأول','الثاني','الثالث'], 'ثانوي': ['الأول','الثاني','الثالث'] };
+  let selectedStage = null, selectedGrade = null;
+
   const token = localStorage.getItem('mudraj_token');
-  const userRaw = localStorage.getItem('mudraj_user');
   if(!token){ window.location.href = '/'; }
-  else {
-    try{
-      const user = JSON.parse(userRaw);
-      document.getElementById('welcomeTitle').textContent = 'أهلاً، ' + (user.firstName || user.username);
-    }catch(e){}
-  }
+
+  const userRaw = localStorage.getItem('mudraj_user');
+  try{
+    const user = JSON.parse(userRaw);
+    document.getElementById('welcomeTitle').textContent = 'أهلاً، ' + (user.firstName || user.username);
+  }catch(e){}
+
   function logout(){
     localStorage.removeItem('mudraj_token');
     localStorage.removeItem('mudraj_user');
     window.location.href = '/';
   }
+
+  async function api(path, options={}){
+    const res = await fetch(path, {
+      ...options,
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...(options.headers||{}) }
+    });
+    if(res.status === 401 || res.status === 403){ logout(); return; }
+    return res.json();
+  }
+
+  function stageIcon(stage){
+    return stage === 'ابتدائي' ? '🟢' : stage === 'متوسط' ? '🟡' : '🔵';
+  }
+
+  async function loadClasses(){
+    const data = await api('/api/classes');
+    const content = document.getElementById('content');
+    if(!data || !data.success){ content.innerHTML = '<div class="empty">تعذر تحميل الفصول</div>'; return; }
+
+    if(data.classes.length === 0){
+      content.innerHTML = '<div class="empty"><div style="font-size:32px">📚</div><p>ما عندك فصول بعد — اضغط "فصل جديد" فوق للبدء</p></div>';
+      return;
+    }
+
+    const groups = {};
+    data.classes.forEach(c => {
+      const key = c.stage || 'غير محدد';
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+
+    let html = '';
+    for(const stage of ['ابتدائي','متوسط','ثانوي']){
+      if(!groups[stage]) continue;
+      html += `<div class="stage-block"><div class="stage-title"><span class="bar"></span>${stageIcon(stage)} ${stage}</div><div class="classes-grid">`;
+      groups[stage].forEach(c => {
+        const avg = c.students.length ? Math.round(c.students.reduce((a,s)=>a+s.score,0) / c.students.length) : 0;
+        html += `
+          <div class="class-card" onclick="location.href='/class.html?id=${c.id}'">
+            <button class="class-del" onclick="event.stopPropagation(); deleteClass(${c.id})" title="حذف">✕</button>
+            <div class="cname">${c.name}</div>
+            <div class="cmeta">${c.studentCount} طالب</div>
+            <div class="cavg"><span class="gold-dot"></span> متوسط النقاط: ${avg}</div>
+          </div>`;
+      });
+      html += `</div></div>`;
+    }
+    content.innerHTML = html;
+  }
+
+  async function deleteClass(id){
+    if(!confirm('حذف الفصل وكل طلابه؟ ما ينرجع.')) return;
+    await api('/api/classes/' + id, { method:'DELETE' });
+    loadClasses();
+  }
+
+  function openModal(){
+    document.getElementById('overlay').classList.add('show');
+    selectedStage = null; selectedGrade = null;
+    document.querySelectorAll('#stageRow .choice').forEach(el => el.classList.remove('selected'));
+    document.getElementById('gradeRow').innerHTML = '';
+    document.getElementById('sectionInput').value = '';
+    hideModalAlert();
+  }
+  function closeModal(){ document.getElementById('overlay').classList.remove('show'); }
+
+  function selectStage(stage){
+    selectedStage = stage; selectedGrade = null;
+    document.querySelectorAll('#stageRow .choice').forEach(el => el.classList.toggle('selected', el.dataset.stage === stage));
+    const gradeRow = document.getElementById('gradeRow');
+    gradeRow.innerHTML = GRADE_NAMES[stage].map((name, i) =>
+      `<div class="choice" data-grade="${i+1}" onclick="selectGrade(${i+1})">${name}</div>`
+    ).join('');
+  }
+  function selectGrade(grade){
+    selectedGrade = grade;
+    document.querySelectorAll('#gradeRow .choice').forEach(el => el.classList.toggle('selected', Number(el.dataset.grade) === grade));
+  }
+
+  function showModalAlert(msg){ const a = document.getElementById('modalAlert'); a.textContent = msg; a.className = 'alert show error'; }
+  function hideModalAlert(){ document.getElementById('modalAlert').className = 'alert'; }
+
+  async function createClass(){
+    hideModalAlert();
+    const section = Number(document.getElementById('sectionInput').value);
+    if(!selectedStage) return showModalAlert('اختر المرحلة');
+    if(!selectedGrade) return showModalAlert('اختر الصف');
+    if(!section || section < 1 || section > 8) return showModalAlert('رقم الشعبة لازم يكون بين ١ و ٨');
+
+    const btn = document.getElementById('createBtn');
+    const btnText = document.getElementById('createBtnText');
+    btn.disabled = true; btnText.innerHTML = '<span class="spinner"></span> جارٍ الإنشاء...';
+
+    const data = await api('/api/classes', { method:'POST', body: JSON.stringify({ stage:selectedStage, grade:selectedGrade, section }) });
+    btn.disabled = false; btnText.textContent = 'إنشاء الفصل';
+
+    if(!data || !data.success){ showModalAlert((data && data.message) || 'تعذر إنشاء الفصل'); return; }
+    closeModal();
+    loadClasses();
+  }
+
+  loadClasses();
 </script>
 </body>
 </html>

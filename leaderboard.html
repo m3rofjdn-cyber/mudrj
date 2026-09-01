@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — الترتيب العام</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E; --gold:#C9922B; --gold-soft:#E8C784; --paper:#F7F4EC; --card:#FFFFFF;
+    --text:#20242E; --text-mute:#5B6472; --line:#E4DFD1;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+  header{
+    background:var(--ink); color:#fff; padding:16px 32px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .head-left{ display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .title{ font-weight:600; font-size:17px; }
+  main{ max-width:640px; margin:0 auto; padding:36px 24px 80px; }
+  .lb-row{
+    display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:14px 18px; margin-bottom:9px;
+  }
+  .lb-rank{ width:30px; text-align:center; font-weight:700; color:var(--text-mute); font-size:15px; }
+  .lb-rank.top1{ color:var(--gold); font-size:18px; }
+  .lb-rank.top2{ color:#9AA1AC; }
+  .lb-rank.top3{ color:#B08050; }
+  .lb-info{ flex:1; }
+  .lb-name{ font-size:14.5px; font-weight:500; }
+  .lb-class{ font-size:12px; color:var(--text-mute); font-weight:300; }
+  .lb-score{ font-weight:700; color:var(--ink); font-size:15px; }
+  .empty{ text-align:center; padding:64px 24px; background:var(--card); border:1px dashed var(--line); border-radius:14px; color:var(--text-mute); }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-left">
+    <button class="back-btn" onclick="location.href='/dashboard.html'">→</button>
+    <div class="title">🏆 الترتيب العام</div>
+  </div>
+</header>
+<main>
+  <div id="list">جارٍ التحميل...</div>
+</main>
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  async function api(path){
+    const res = await fetch(path, { headers:{ 'Authorization':'Bearer ' + token } });
+    if(res.status === 401 || res.status === 403){ window.location.href = '/'; return; }
+    return res.json();
+  }
+
+  async function load(){
+    const data = await api('/api/leaderboard');
+    const list = document.getElementById('list');
+    if(!data || !data.success){ list.innerHTML = '<div class="empty">تعذر تحميل الترتيب</div>'; return; }
+    if(data.leaderboard.length === 0){ list.innerHTML = '<div class="empty">ما فيه طلاب بعد بأي فصل</div>'; return; }
+
+    list.innerHTML = data.leaderboard.map((s,i) => `
+      <div class="lb-row">
+        <div class="lb-rank ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i+1}</div>
+        <div class="lb-info">
+          <div class="lb-name">${s.name}</div>
+          <div class="lb-class">${s.class_name}</div>
+        </div>
+        <div class="lb-score">${s.score}</div>
+      </div>
+    `).join('');
+  }
+  load();
+</script>
+</body>
+</html>

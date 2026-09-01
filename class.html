@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — الفصل</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F; --ok-bg:#E9F4EC;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+
+  header{
+    background:var(--ink); color:#fff; padding:16px 32px;
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20;
+  }
+  .head-left{ display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .cname-head{ font-weight:600; font-size:17px; }
+  .cmeta-head{ font-size:12.5px; color:rgba(255,255,255,0.55); font-weight:300; }
+  .head-btn{
+    background:none; border:1px solid rgba(255,255,255,0.25); color:#fff;
+    padding:8px 16px; border-radius:8px; font-family:inherit; font-size:13.5px; cursor:pointer;
+  }
+  .head-btn:hover{ background:rgba(255,255,255,0.08); }
+  .head-btn.primary{ background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:600; }
+
+  .tabs-bar{
+    display:flex; gap:4px; background:var(--card); border-bottom:1px solid var(--line);
+    padding:0 24px; position:sticky; top:65px; z-index:15; overflow-x:auto;
+  }
+  .tabbtn{
+    padding:14px 16px; background:none; border:none; font-family:inherit; font-size:14px;
+    color:var(--text-mute); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .tabbtn.active{ color:var(--ink); border-color:var(--gold); font-weight:600; }
+
+  main{ max-width:1080px; margin:0 auto; padding:28px 24px 80px; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ===== الطلاب ===== */
+  .students-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+  .students-toolbar .count{ color:var(--text-mute); font-size:13.5px; font-weight:300; }
+  .students-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
+
+  .student-box{
+    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
+    position:relative; transition:box-shadow .15s ease;
+  }
+  .student-box.flash{ box-shadow:0 0 0 3px var(--gold-soft); }
+  .sb-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+  .sb-name{ font-size:15px; font-weight:600; }
+  .sb-score{ font-size:13px; font-weight:700; color:var(--ink); background:var(--paper); padding:3px 10px; border-radius:20px; }
+  .sb-score.neg{ color:var(--danger); }
+  .sb-badges{ font-size:11.5px; color:var(--text-mute); font-weight:300; margin-bottom:12px; display:flex; gap:8px; }
+  .sb-actions{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .sb-btn{
+    padding:8px 4px; border:1px solid var(--line); border-radius:8px; background:var(--paper);
+    font-size:15px; cursor:pointer; transition:transform .1s ease, background .15s ease;
+  }
+  .sb-btn:hover{ background:#fff; border-color:var(--ink-soft); }
+  .sb-btn:active{ transform:scale(0.92); }
+  .sb-del{ position:absolute; top:12px; left:12px; background:none; border:none; color:var(--text-mute); font-size:13px; cursor:pointer; opacity:0; }
+  .student-box:hover .sb-del{ opacity:1; }
+  .sb-del:hover{ color:var(--danger); }
+
+  .add-student-row{ display:flex; gap:10px; margin-top:20px; max-width:360px; }
+  .add-student-row input{
+    flex:1; padding:11px 13px; border:1px solid var(--line); border-radius:9px; font-family:inherit; font-size:14px; background:var(--card);
+  }
+  .add-student-row input:focus{ outline:none; border-color:var(--ink-soft); }
+  .add-student-row button{
+    padding:11px 18px; border:none; border-radius:9px; background:var(--ink); color:#fff; font-family:inherit;
+    font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+
+  /* ===== التحضير ===== */
+  .att-toolbar{ display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .att-toolbar input[type=date]{ padding:9px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; }
+  .att-toolbar button{ padding:9px 16px; border:none; border-radius:8px; background:var(--ink); color:#fff; font-family:inherit; font-size:13.5px; cursor:pointer; }
+  .att-list{ display:flex; flex-direction:column; gap:8px; max-width:520px; }
+  .att-row{
+    display:flex; align-items:center; justify-content:space-between; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:10px 14px;
+  }
+  .att-row .name{ font-size:14.5px; }
+  .att-choices{ display:flex; gap:6px; }
+  .att-choice{
+    padding:6px 12px; border-radius:8px; border:1px solid var(--line); font-size:12.5px; cursor:pointer; background:var(--paper);
+  }
+  .att-choice.present.on{ background:var(--ok-bg); border-color:var(--ok); color:var(--ok); }
+  .att-choice.absent.on{ background:var(--danger-bg); border-color:var(--danger); color:var(--danger); }
+  .att-choice.late.on{ background:#FDF2DC; border-color:var(--gold); color:#8C6414; }
+
+  /* ===== العجلة ===== */
+  .wheel-wrap{ display:flex; flex-direction:column; align-items:center; padding:30px 0; }
+  .wheel-area{ position:relative; width:320px; height:320px; margin-bottom:24px; }
+  #wheelCanvas{ transition:transform 4s cubic-bezier(0.17,0.67,0.12,0.99); }
+  .wheel-pointer{
+    position:absolute; top:-6px; right:50%; transform:translateX(50%);
+    width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent;
+    border-top:20px solid var(--gold); z-index:5;
+  }
+  .wheel-btn{
+    padding:13px 32px; border:none; border-radius:10px; background:var(--ink); color:#fff;
+    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;
+  }
+  .wheel-btn:disabled{ opacity:0.6; }
+  .wheel-result{ margin-top:20px; font-size:20px; font-weight:600; color:var(--ink); min-height:28px; }
+
+  /* ===== ترتيب الفصل ===== */
+  .lb-row{
+    display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:12px 16px; margin-bottom:8px; max-width:520px;
+  }
+  .lb-rank{ width:26px; text-align:center; font-weight:700; color:var(--text-mute); font-size:14px; }
+  .lb-rank.top1{ color:var(--gold); }
+  .lb-name{ flex:1; font-size:14.5px; }
+  .lb-score{ font-weight:700; color:var(--ink); font-size:14px; }
+
+  .empty{ text-align:center; padding:48px 24px; background:var(--card); border:1px dashed var(--line); border-radius:14px; color:var(--text-mute); font-size:13.5px; font-weight:300; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-left">
+    <button class="back-btn" onclick="location.href='/dashboard.html'">→</button>
+    <div>
+      <div class="cname-head" id="className">جارٍ التحميل...</div>
+      <div class="cmeta-head" id="classMeta"></div>
+    </div>
+  </div>
+  <button class="head-btn" onclick="logout()">خروج</button>
+</header>
+
+<div class="tabs-bar">
+  <button class="tabbtn active" data-tab="students" onclick="switchTab('students')">👥 الطلاب</button>
+  <button class="tabbtn" data-tab="attendance" onclick="switchTab('attendance')">📋 التحضير</button>
+  <button class="tabbtn" data-tab="wheel" onclick="switchTab('wheel')">🎡 عجلة الطلاب</button>
+  <button class="tabbtn" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏆 ترتيب الفصل</button>
+</div>
+
+<main>
+
+  <!-- ===== الطلاب ===== -->
+  <section class="view active" id="view-students">
+    <div class="students-toolbar">
+      <div class="count" id="studentCount">جارٍ التحميل...</div>
+    </div>
+    <div class="students-grid" id="studentsGrid"></div>
+    <div class="add-student-row">
+      <input id="newStudentName" type="text" placeholder="اسم الطالب الجديد">
+      <button onclick="addStudent()">إضافة</button>
+    </div>
+  </section>
+
+  <!-- ===== التحضير ===== -->
+  <section class="view" id="view-attendance">
+    <div class="att-toolbar">
+      <input type="date" id="attDate">
+      <button onclick="loadAttendance()">تحميل</button>
+      <button onclick="saveAttendance()" style="background:var(--gold); color:var(--ink);">حفظ التحضير</button>
+    </div>
+    <div class="att-list" id="attList"></div>
+  </section>
+
+  <!-- ===== العجلة ===== -->
+  <section class="view" id="view-wheel">
+    <div class="wheel-wrap">
+      <div class="wheel-area">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheelCanvas" width="320" height="320"></canvas>
+      </div>
+      <button class="wheel-btn" id="spinBtn" onclick="spinWheel()">🎡 تدوير العجلة</button>
+      <div class="wheel-result" id="wheelResult"></div>
+    </div>
+  </section>
+
+  <!-- ===== ترتيب الفصل ===== -->
+  <section class="view" id="view-leaderboard">
+    <div id="lbList"></div>
+  </section>
+
+</main>
+
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  const params = new URLSearchParams(window.location.search);
+  const classId = params.get('id');
+  if(!classId){ window.location.href = '/dashboard.html'; }
+
+  let currentStudents = [];
+
+  function logout(){
+    localStorage.removeItem('mudraj_token');
+    localStorage.removeItem('mudraj_user');
+    window.location.href = '/';
+  }
+
+  async function api(path, options={}){
+    const res = await fetch(path, {
+      ...options,
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...(options.headers||{}) }
+    });
+    if(res.status === 401 || res.status === 403){ logout(); return; }
+    return res.json();
+  }
+
+  function switchTab(tab){
+    document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + tab).classList.add('active');
+    if(tab === 'wheel') drawWheel();
+    if(tab === 'leaderboard') renderLeaderboard();
+    if(tab === 'attendance' && !document.getElementById('attDate').value){
+      document.getElementById('attDate').valueAsDate = new Date();
+      loadAttendance();
+    }
+  }
+
+  // ===== تحميل بيانات الفصل =====
+  async function loadClass(){
+    const data = await api('/api/classes/' + classId);
+    if(!data || !data.success){ document.getElementById('className').textContent = 'تعذر تحميل الفصل'; return; }
+    document.getElementById('className').textContent = data.class.name;
+    document.getElementById('classMeta').textContent = data.class.students.length + ' طالب';
+    currentStudents = data.class.students;
+    renderStudents();
+  }
+
+  function renderStudents(){
+    document.getElementById('studentCount').textContent = currentStudents.length + ' طالب';
+    const grid = document.getElementById('studentsGrid');
+    if(currentStudents.length === 0){
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1">ما فيه طلاب بعد — ضيف أول طالب تحت</div>';
+      return;
+    }
+    grid.innerHTML = currentStudents.map(s => `
+      <div class="student-box" id="student-${s.id}">
+        <button class="sb-del" onclick="deleteStudent(${s.id})">حذف</button>
+        <div class="sb-top">
+          <div class="sb-name">${s.name}</div>
+          <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
+        </div>
+        <div class="sb-badges" id="badges-${s.id}">⭐${s.stars||0} · ✔${s.corrects||0} · ✘${s.wrongs||0} · 📘${s.homeworks||0}</div>
+        <div class="sb-actions">
+          <button class="sb-btn" title="نجمة" onclick="rate(${s.id},'star')">⭐</button>
+          <button class="sb-btn" title="صح" onclick="rate(${s.id},'correct')">✔️</button>
+          <button class="sb-btn" title="خطأ" onclick="rate(${s.id},'wrong')">✘</button>
+          <button class="sb-btn" title="أكمل الواجب" onclick="rate(${s.id},'homework')">📘</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function rate(studentId, type){
+    const data = await api('/api/students/' + studentId + '/rate', { method:'POST', body: JSON.stringify({ type }) });
+    if(!data || !data.success) return;
+    const idx = currentStudents.findIndex(s => s.id === studentId);
+    if(idx > -1) currentStudents[idx] = data.student;
+
+    const scoreEl = document.getElementById('score-' + studentId);
+    scoreEl.textContent = data.student.score;
+    scoreEl.className = 'sb-score ' + (data.student.score < 0 ? 'neg' : '');
+    document.getElementById('badges-' + studentId).textContent =
+      `⭐${data.student.stars||0} · ✔${data.student.corrects||0} · ✘${data.student.wrongs||0} · 📘${data.student.homeworks||0}`;
+
+    const box = document.getElementById('student-' + studentId);
+    box.classList.add('flash');
+    setTimeout(() => box.classList.remove('flash'), 400);
+  }
+
+  async function addStudent(){
+    const input = document.getElementById('newStudentName');
+    const name = input.value.trim();
+    if(!name) return;
+    const data = await api('/api/students', { method:'POST', body: JSON.stringify({ classId, name }) });
+    if(!data || !data.success){ alert((data && data.message) || 'تعذر إضافة الطالب'); return; }
+    currentStudents.push(data.student);
+    input.value = '';
+    renderStudents();
+  }
+
+  async function deleteStudent(id){
+    if(!confirm('حذف هذا الطالب؟')) return;
+    await api('/api/students/' + id, { method:'DELETE' });
+    currentStudents = currentStudents.filter(s => s.id !== id);
+    renderStudents();
+  }
+
+  // ===== التحضير =====
+  async function loadAttendance(){
+    const date = document.getElementById('attDate').value;
+    if(!date) return;
+    const data = await api('/api/classes/' + classId + '/attendance?date=' + date);
+    const statusMap = {};
+    if(data && data.success) data.records.forEach(r => statusMap[r.student_id] = r.status);
+
+    const list = document.getElementById('attList');
+    if(currentStudents.length === 0){ list.innerHTML = '<div class="empty">ما فيه طلاب بهذا الفصل</div>'; return; }
+
+    list.innerHTML = currentStudents.map(s => `
+      <div class="att-row" data-student="${s.id}">
+        <div class="name">${s.name}</div>
+        <div class="att-choices">
+          <div class="att-choice present ${statusMap[s.id]==='present'?'on':''}" onclick="setAtt(${s.id},'present')">حاضر</div>
+          <div class="att-choice late ${statusMap[s.id]==='late'?'on':''}" onclick="setAtt(${s.id},'late')">متأخر</div>
+          <div class="att-choice absent ${statusMap[s.id]==='absent'?'on':''}" onclick="setAtt(${s.id},'absent')">غائب</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setAtt(studentId, status){
+    const row = document.querySelector(`.att-row[data-student="${studentId}"]`);
+    row.querySelectorAll('.att-choice').forEach(el => el.classList.remove('on'));
+    row.querySelector('.att-choice.' + status).classList.add('on');
+  }
+
+  async function saveAttendance(){
+    const date = document.getElementById('attDate').value;
+    if(!date) return alert('اختر تاريخ');
+    const records = [];
+    document.querySelectorAll('.att-row').forEach(row => {
+      const on = row.querySelector('.att-choice.on');
+      if(on){
+        const status = on.classList.contains('present') ? 'present' : on.classList.contains('late') ? 'late' : 'absent';
+        records.push({ studentId: Number(row.dataset.student), status });
+      }
+    });
+    const data = await api('/api/classes/' + classId + '/attendance', { method:'POST', body: JSON.stringify({ date, records }) });
+    if(data && data.success) alert('تم حفظ التحضير'); else alert('تعذر الحفظ');
+  }
+
+  // ===== العجلة =====
+  let wheelRotation = 0;
+  const wheelColors = ['#16213E','#C9922B','#2A3A63','#8C6414','#5B6472','#B3432B','#2F6E4F','#E8C784'];
+
+  function drawWheel(){
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const cx = 160, cy = 160, r = 150;
+    ctx.clearRect(0,0,320,320);
+    if(currentStudents.length === 0){
+      ctx.fillStyle = '#5B6472'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('ضيف طلاب أول', cx, cy);
+      return;
+    }
+    const n = currentStudents.length;
+    const slice = (2 * Math.PI) / n;
+    currentStudents.forEach((s, i) => {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, i*slice, (i+1)*slice);
+      ctx.fillStyle = wheelColors[i % wheelColors.length];
+      ctx.fill();
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(i*slice + slice/2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = '13px "IBM Plex Sans Arabic", sans-serif';
+      const label = s.name.length > 10 ? s.name.slice(0,9) + '…' : s.name;
+      ctx.fillText(label, r - 12, 5);
+      ctx.restore();
+    });
+  }
+
+  function spinWheel(){
+    if(currentStudents.length === 0) return;
+    const btn = document.getElementById('spinBtn');
+    btn.disabled = true;
+    const n = currentStudents.length;
+    const slice = 360 / n;
+    const winnerIndex = Math.floor(Math.random() * n);
+    const extraSpins = 5 * 360;
+    const targetAngle = 360 - (winnerIndex * slice + slice/2);
+    wheelRotation += extraSpins + targetAngle - (wheelRotation % 360);
+
+    const canvas = document.getElementById('wheelCanvas');
+    canvas.style.transform = `rotate(${wheelRotation}deg)`;
+    document.getElementById('wheelResult').textContent = '';
+
+    setTimeout(() => {
+      document.getElementById('wheelResult').textContent = '🎉 ' + currentStudents[winnerIndex].name;
+      btn.disabled = false;
+    }, 4100);
+  }
+
+  // ===== ترتيب الفصل =====
+  function renderLeaderboard(){
+    const sorted = [...currentStudents].sort((a,b) => b.score - a.score);
+    const list = document.getElementById('lbList');
+    if(sorted.length === 0){ list.innerHTML = '<div class="empty">ما فيه طلاب بعد</div>'; return; }
+    list.innerHTML = sorted.map((s,i) => `
+      <div class="lb-row">
+        <div class="lb-rank ${i===0?'top1':''}">${i+1}</div>
+        <div class="lb-name">${s.name}</div>
+        <div class="lb-score">${s.score}</div>
+      </div>
+    `).join('');
+  }
+
+  loadClass();
+</script>
+</body>
+</html>
