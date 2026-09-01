@@ -14,7 +14,7 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '821921990770-822776a7seho4i8les9lbqjsnut2lv23.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '821921990770-cf1p9jkm95hsi6cvr0tatjeo4ohgum9h.apps.googleusercontent.com';
 
 // لازم يكون JWT_SECRET موجود بمتغيرات البيئة — بدونه ما نشغل السيرفر
 if (!JWT_SECRET) {
@@ -56,6 +56,15 @@ async function initDB() {
       console.log('تم إلغاء إجبارية عمود email القديم.');
     }
 
+    const passwordColumn = await pool.query(`
+      SELECT is_nullable FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'password';
+    `);
+    if (passwordColumn.rows.length > 0 && passwordColumn.rows[0].is_nullable === 'NO') {
+      await pool.query(`ALTER TABLE users ALTER COLUMN password DROP NOT NULL;`);
+      console.log('تم إلغاء إجبارية عمود password (لدعم دخول قوقل بدون كلمة مرور).');
+    }
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS classes (
         id SERIAL PRIMARY KEY,
@@ -71,6 +80,15 @@ async function initDB() {
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS grade SMALLINT;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS section SMALLINT;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+
+    const userIdColumn = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'classes' AND column_name = 'user_id';
+    `);
+    if (userIdColumn.rows.length === 0) {
+      await pool.query(`ALTER TABLE classes ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;`);
+      console.log('تم إضافة عمود user_id الناقص لجدول classes.');
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS students (
