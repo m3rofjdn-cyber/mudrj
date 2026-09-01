@@ -42,6 +42,20 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+
+    // ترحيل: يصلح جدول users لو كان موجود من قبل بشكل مختلف (مثلاً فيه عمود email إجباري وناقص google_id)
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+
+    const emailColumn = await pool.query(`
+      SELECT is_nullable FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'email';
+    `);
+    if (emailColumn.rows.length > 0 && emailColumn.rows[0].is_nullable === 'NO') {
+      await pool.query(`ALTER TABLE users ALTER COLUMN email DROP NOT NULL;`);
+      console.log('تم إلغاء إجبارية عمود email القديم.');
+    }
+
     console.log('تم تجهيز قاعدة البيانات بنجاح.');
   } catch (err) {
     console.error('خطأ بتجهيز قاعدة البيانات:', err.message);
