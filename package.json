@@ -1,7 +1,7 @@
 {
-  "name": "modaraj-backend",
+  "name": "mudraj-auth",
   "version": "1.0.0",
-  "description": "نظام إدارة الكشوفات - مُدرج",
+  "description": "تسجيل الدخول وإنشاء الحساب - مُدرَج",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

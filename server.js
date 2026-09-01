@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
@@ -9,11 +10,17 @@ const { OAuth2Client } = require('google-auth-library');
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'mudraj_secret_key_123';
+const JWT_SECRET = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '821921990770-822776a7seho4i8les9lbqjsnut2lv23.apps.googleusercontent.com';
+
+// لازم يكون JWT_SECRET موجود بمتغيرات البيئة — بدونه ما نشغل السيرفر
+if (!JWT_SECRET) {
+  console.error('خطأ فادح: متغير البيئة JWT_SECRET غير موجود. أضِفه بإعدادات Render (Environment) قبل التشغيل.');
+  process.exit(1);
+}
 
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
@@ -29,27 +36,15 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         first_name VARCHAR(50),
         last_name VARCHAR(50),
-        username VARCHAR(50) UNIQUE,
+        username VARCHAR(50) UNIQUE NOT NULL,
         password VARCHAR(255),
-        google_id VARCHAR(255)
-      );
-
-      CREATE TABLE IF NOT EXISTS classes (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS students (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        score INTEGER DEFAULT 0,
-        class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE
+        google_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log("Database initialized successfully.");
+    console.log('تم تجهيز قاعدة البيانات بنجاح.');
   } catch (err) {
-    console.error("Database Init Error:", err);
+    console.error('خطأ بتجهيز قاعدة البيانات:', err.message);
   }
 }
 initDB();
@@ -66,12 +61,22 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// ===== إنشاء حساب (اسم مستخدم فقط، بدون بريد إلكتروني) =====
 app.post('/api/register', async (req, res) => {
   const { firstName, lastName, username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ success: false, message: 'جميع الحقول مطلوبة' });
+
+  if (!firstName || !username || !password) {
+    return res.status(400).json({ success: false, message: 'الاسم الأول واسم المستخدم وكلمة المرور مطلوبة' });
+  }
+  if (username.trim().length < 3) {
+    return res.status(400).json({ success: false, message: 'اسم المستخدم لازم يكون ٣ أحرف على الأقل' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: 'كلمة المرور لازم تكون ٦ أحرف على الأقل' });
+  }
 
   try {
-    const userExist = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const userExist = await pool.query('SELECT id FROM users WHERE username = $1', [username.trim()]);
     if (userExist.rows.length > 0) {
       return res.status(400).json({ success: false, message: 'اسم المستخدم مأخوذ بالفعل' });
     }
@@ -79,32 +84,52 @@ app.post('/api/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query(
       'INSERT INTO users (first_name, last_name, username, password) VALUES ($1, $2, $3, $4)',
-      [firstName, lastName, username, hashedPassword]
+      [firstName.trim(), (lastName || '').trim(), username.trim(), hashedPassword]
     );
 
     res.json({ success: true, message: 'تم إنشاء الحساب بنجاح! يمكنك الدخول الآن' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('خطأ بإنشاء الحساب:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر، حاول مرة أخرى' });
   }
 });
 
+// ===== تسجيل الدخول (اسم مستخدم + كلمة مرور) =====
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'اسم المستخدم وكلمة المرور مطلوبة' });
+  }
+
   try {
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (result.rows.length === 0) return res.status(400).json({ success: false, message: 'المستخدم غير موجود' });
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username.trim()]);
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
 
     const user = result.rows[0];
-    const validPass = await bcrypt.compare(password, user.password || '');
-    if (!validPass) return res.status(400).json({ success: false, message: 'كلمة المرور خاطئة' });
+    if (!user.password) {
+      return res.status(400).json({ success: false, message: 'هذا الحساب مسجل عبر قوقل، سجّل الدخول من زر قوقل' });
+    }
+
+    const validPass = await bcrypt.compare(password, user.password);
+    if (!validPass) {
+      return res.status(400).json({ success: false, message: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
 
     const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, token, user: { firstName: user.first_name, username: user.username } });
+    res.json({
+      success: true,
+      token,
+      user: { firstName: user.first_name, lastName: user.last_name, username: user.username }
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('خطأ بتسجيل الدخول:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر، حاول مرة أخرى' });
   }
 });
 
+// ===== تسجيل الدخول بقوقل =====
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false, message: 'التوكن مفقود' });
@@ -116,15 +141,23 @@ app.post('/api/auth/google', async (req, res) => {
     });
     const payload = ticket.getPayload();
     const googleId = payload['sub'];
-    const email = payload['email'];
-    const firstName = payload['given_name'] || 'معلم';
+    const email = payload['email'] || '';
+    const firstName = payload['given_name'] || 'مستخدم';
     const lastName = payload['family_name'] || '';
-    const username = email.split('@')[0];
+    const baseUsername = email ? email.split('@')[0] : 'user' + googleId.slice(-6);
 
-    let result = await pool.query('SELECT * FROM users WHERE google_id = $1 OR username = $2', [googleId, username]);
+    let result = await pool.query('SELECT * FROM users WHERE google_id = $1', [googleId]);
     let user;
 
     if (result.rows.length === 0) {
+      // تأكد إن اسم المستخدم المشتق من الإيميل مو مستخدم، لو مستخدم أضف رقم
+      let username = baseUsername;
+      let suffix = 1;
+      while ((await pool.query('SELECT id FROM users WHERE username = $1', [username])).rows.length > 0) {
+        username = baseUsername + suffix;
+        suffix++;
+      }
+
       const newUser = await pool.query(
         'INSERT INTO users (first_name, last_name, username, google_id) VALUES ($1, $2, $3, $4) RETURNING *',
         [firstName, lastName, username, googleId]
@@ -135,71 +168,28 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     const jwtToken = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, token: jwtToken, user: { firstName: user.first_name, username: user.username } });
+    res.json({
+      success: true,
+      token: jwtToken,
+      user: { firstName: user.first_name, lastName: user.last_name, username: user.username }
+    });
   } catch (err) {
-    res.status(401).json({ success: false, message: `فشل التوثيق عبر قوقل: ${err.message}` });
+    console.error('خطأ بتوثيق قوقل:', err.message);
+    res.status(401).json({ success: false, message: 'فشل التوثيق عبر قوقل: ' + err.message });
   }
 });
 
-app.get('/api/classes', authenticateToken, async (req, res) => {
+// ===== نموذج لصفحة محمية للتأكد إن الجلسة شغالة =====
+app.get('/api/me', authenticateToken, async (req, res) => {
   try {
-    const classesRes = await pool.query('SELECT * FROM classes WHERE user_id = $1 ORDER BY id DESC', [req.user.userId]);
-    const classes = classesRes.rows;
-
-    for (let cls of classes) {
-      const studentsRes = await pool.query('SELECT * FROM students WHERE class_id = $1 ORDER BY id ASC', [cls.id]);
-      cls.students = studentsRes.rows;
-    }
-
-    res.json({ success: true, classes });
+    const result = await pool.query('SELECT id, first_name, last_name, username FROM users WHERE id = $1', [req.user.userId]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'المستخدم غير موجود' });
+    res.json({ success: true, user: result.rows[0] });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/classes', authenticateToken, async (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ success: false, message: 'اسم الفصل مطلوب' });
-
-  try {
-    const newClass = await pool.query(
-      'INSERT INTO classes (name, user_id) VALUES ($1, $2) RETURNING *',
-      [name, req.user.userId]
-    );
-    res.json({ success: true, class: { ...newClass.rows[0], students: [] } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/students', authenticateToken, async (req, res) => {
-  const { classId, name } = req.body;
-  if (!classId || !name) return res.status(400).json({ success: false, message: 'جميع البيانات مطلوبة' });
-
-  try {
-    const newStudent = await pool.query(
-      'INSERT INTO students (name, class_id, score) VALUES ($1, $2, 0) RETURNING *',
-      [name, classId]
-    );
-    res.json({ success: true, student: newStudent.rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-app.post('/api/students/score', authenticateToken, async (req, res) => {
-  const { studentId, points } = req.body;
-  try {
-    const updated = await pool.query(
-      'UPDATE students SET score = score + $1 WHERE id = $2 RETURNING *',
-      [points, studentId]
-    );
-    res.json({ success: true, student: updated.rows[0] });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`السيرفر شغال على المنفذ ${PORT}`);
 });
