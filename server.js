@@ -8,7 +8,7 @@ const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
 const multer = require('multer');
 const XLSX = require('xlsx');
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -542,11 +542,11 @@ app.post('/api/classes/:id/attendance', authenticateToken, async (req, res) => {
 function looksLikeArabicName(val) {
   if (typeof val !== 'string') return false;
   const trimmed = val.trim();
-  if (trimmed.length < 4) return false;
+  if (trimmed.length < 4 || trimmed.length > 40) return false;
   const words = trimmed.split(/\s+/);
-  if (words.length < 2) return false;
-  const arabicRatio = (trimmed.match(/[\u0600-\u06FF]/g) || []).length / trimmed.length;
-  return arabicRatio > 0.6;
+  if (words.length < 2 || words.length > 5) return false;
+  const arabicRatio = (trimmed.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length / trimmed.length;
+  return arabicRatio > 0.75;
 }
 
 function parseExcelBuffer(buffer) {
@@ -587,9 +587,9 @@ function parseExcelBuffer(buffer) {
 }
 
 function parsePdfText(text) {
-  // نستخرج الأسطر اللي تبدو أسماء عربية كاملة (كلمتين فأكثر) كتخمين أولي
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-  const names = [...new Set(lines.filter(looksLikeArabicName))];
+  // نفصل على الأسطر والتاب معًا لأن استخراج نص PDF أحيانًا يلزق أعمدة الجدول ببعض بفواصل تاب
+  const tokens = text.split(/[\r\n\t]+/).map(l => l.trim()).filter(Boolean);
+  const names = [...new Set(tokens.filter(looksLikeArabicName))];
   return [{ suggestedClassName: 'من ملف PDF (راجع القائمة)', students: names }];
 }
 
@@ -603,8 +603,10 @@ app.post('/api/import/parse', authenticateToken, upload.single('file'), async (r
     if (ext === 'xlsx' || ext === 'xls') {
       groups = parseExcelBuffer(req.file.buffer);
     } else if (ext === 'pdf') {
-      const data = await pdfParse(req.file.buffer);
-      groups = parsePdfText(data.text);
+      const parser = new PDFParse({ data: req.file.buffer });
+      const result = await parser.getText();
+      await parser.destroy();
+      groups = parsePdfText(result.text);
     } else {
       return res.status(400).json({ success: false, message: 'الصيغة المدعومة: Excel (.xlsx) أو PDF فقط' });
     }
