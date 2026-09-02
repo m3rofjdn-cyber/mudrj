@@ -6,6 +6,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
+const multer = require('multer');
+const XLSX = require('xlsx');
+const pdfParse = require('pdf-parse');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const app = express();
 app.use(express.json());
@@ -158,6 +163,13 @@ app.post('/api/register', async (req, res) => {
   }
   if (username.trim().length < 3) {
     return res.status(400).json({ success: false, message: 'اسم المستخدم لازم يكون ٣ أحرف على الأقل' });
+  }
+  const usernamePattern = /^[A-Za-z0-9_\u0600-\u06FF]{3,30}$/;
+  if (!usernamePattern.test(username.trim())) {
+    return res.status(400).json({ success: false, message: 'اسم المستخدم يقبل بس حروف وأرقام و_ فقط، بدون مسافات أو رموز' });
+  }
+  if (!/^[A-Za-z0-9_\u0600-\u064A]{3,20}$/.test(username.trim())) {
+    return res.status(400).json({ success: false, message: 'اسم المستخدم يسمح فيه بس بحروف وأرقام و "_"، بدون مسافات أو رموز' });
   }
   if (password.length < 6) {
     return res.status(400).json({ success: false, message: 'كلمة المرور لازم تكون ٦ أحرف على الأقل' });
@@ -439,6 +451,32 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== سحب وسام (عكس التقييم) =====
+app.post('/api/students/:id/unrate', authenticateToken, async (req, res) => {
+  const { type } = req.body;
+  if (!POINTS.hasOwnProperty(type)) {
+    return res.status(400).json({ success: false, message: 'نوع تقييم غير معروف' });
+  }
+
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    const column = COUNTER_COLUMN[type];
+    const updated = await pool.query(
+      `UPDATE students SET score = score - $1, ${column} = GREATEST(${column} - 1, 0) WHERE id = $2 RETURNING *`,
+      [POINTS[type], req.params.id]
+    );
+    res.json({ success: true, student: updated.rows[0] });
+  } catch (err) {
+    console.error('خطأ بسحب الوسام:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
 // ===== الترتيب العام (كل فصول المعلم) =====
 app.get('/api/leaderboard', authenticateToken, async (req, res) => {
   try {
@@ -497,6 +535,132 @@ app.post('/api/classes/:id/attendance', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('خطأ بحفظ التحضير:', err.message);
     res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== استيراد من نور: تحليل الملف (بدون حفظ) =====
+function looksLikeArabicName(val) {
+  if (typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  if (trimmed.length < 4) return false;
+  const words = trimmed.split(/\s+/);
+  if (words.length < 2) return false;
+  const arabicRatio = (trimmed.match(/[\u0600-\u06FF]/g) || []).length / trimmed.length;
+  return arabicRatio > 0.6;
+}
+
+function parseExcelBuffer(buffer) {
+  const wb = XLSX.read(buffer, { type: 'buffer' });
+  const results = [];
+
+  wb.SheetNames.forEach(sheetName => {
+    const sheet = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+    if (rows.length < 2) return;
+
+    const headerRow = rows[0].map(h => (typeof h === 'string' ? h : ''));
+    let nameColIndex = headerRow.findIndex(h => /اسم/.test(h));
+
+    if (nameColIndex === -1) {
+      let bestScore = -1;
+      for (let c = 0; c < Math.max(headerRow.length, 5); c++) {
+        let score = 0;
+        for (let r = 1; r < rows.length; r++) {
+          if (looksLikeArabicName(rows[r][c])) score++;
+        }
+        if (score > bestScore) { bestScore = score; nameColIndex = c; }
+      }
+    }
+
+    const names = [...new Set(
+      rows.slice(1)
+        .map(r => (r[nameColIndex] || '').toString().trim())
+        .filter(v => v.length > 1)
+    )];
+
+    if (names.length > 0) {
+      results.push({ suggestedClassName: sheetName, students: names });
+    }
+  });
+
+  return results;
+}
+
+function parsePdfText(text) {
+  // نستخرج الأسطر اللي تبدو أسماء عربية كاملة (كلمتين فأكثر) كتخمين أولي
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const names = [...new Set(lines.filter(looksLikeArabicName))];
+  return [{ suggestedClassName: 'من ملف PDF (راجع القائمة)', students: names }];
+}
+
+app.post('/api/import/parse', authenticateToken, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'ما فيه ملف مرفوع' });
+
+  try {
+    const ext = (req.file.originalname.split('.').pop() || '').toLowerCase();
+    let groups = [];
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      groups = parseExcelBuffer(req.file.buffer);
+    } else if (ext === 'pdf') {
+      const data = await pdfParse(req.file.buffer);
+      groups = parsePdfText(data.text);
+    } else {
+      return res.status(400).json({ success: false, message: 'الصيغة المدعومة: Excel (.xlsx) أو PDF فقط' });
+    }
+
+    if (groups.length === 0 || groups.every(g => g.students.length === 0)) {
+      return res.status(400).json({ success: false, message: 'ما قدرت ألقى أسماء طلاب واضحة بالملف، جرّب تصدير الملف بصيغة ثانية من نور أو أضف الطلاب يدويًا' });
+    }
+
+    res.json({ success: true, groups });
+  } catch (err) {
+    console.error('خطأ بتحليل ملف نور:', err.message);
+    res.status(500).json({ success: false, message: 'تعذر قراءة الملف، تأكد إنه مو تالف' });
+  }
+});
+
+// ===== استيراد من نور: التأكيد والحفظ الفعلي بقاعدة البيانات =====
+app.post('/api/import/confirm', authenticateToken, async (req, res) => {
+  const { classes } = req.body;
+  if (!Array.isArray(classes) || classes.length === 0) {
+    return res.status(400).json({ success: false, message: 'ما فيه بيانات للاستيراد' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    let importedClasses = 0, importedStudents = 0;
+
+    for (const cls of classes) {
+      const name = (cls.name || '').trim();
+      const students = Array.isArray(cls.students) ? cls.students.map(s => s.trim()).filter(Boolean) : [];
+      if (!name || students.length === 0) continue;
+
+      const newClass = await client.query(
+        'INSERT INTO classes (name, stage, grade, section, user_id) VALUES ($1, NULL, NULL, NULL, $2) RETURNING id',
+        [name, req.user.userId]
+      );
+      const classId = newClass.rows[0].id;
+      importedClasses++;
+
+      for (const studentName of students) {
+        await client.query(
+          'INSERT INTO students (name, class_id, score) VALUES ($1, $2, 0)',
+          [studentName, classId]
+        );
+        importedStudents++;
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true, importedClasses, importedStudents });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('خطأ بحفظ الاستيراد:', err.message);
+    res.status(500).json({ success: false, message: 'تعذر حفظ البيانات' });
+  } finally {
+    client.release();
   }
 });
 

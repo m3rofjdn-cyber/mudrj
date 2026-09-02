@@ -129,6 +129,7 @@
   <div class="mark"><span class="dot"></span><span>مُدرَج</span></div>
   <div class="head-actions">
     <button class="head-btn" onclick="location.href='/leaderboard.html'">🏆 الترتيب العام</button>
+    <button class="head-btn" onclick="location.href='/import.html'">📥 استيراد من نور</button>
     <button class="head-btn primary" onclick="openModal()">+ فصل جديد</button>
     <button class="head-btn" onclick="logout()">خروج</button>
   </div>
@@ -231,9 +232,10 @@
     });
 
     let html = '';
-    for(const stage of ['ابتدائي','متوسط','ثانوي']){
+    for(const stage of ['ابتدائي','متوسط','ثانوي','غير محدد']){
       if(!groups[stage]) continue;
-      html += `<div class="stage-block"><div class="stage-title"><span class="bar"></span>${stageIcon(stage)} ${stage}</div><div class="classes-grid">`;
+      const label = stage === 'غير محدد' ? '📥 مستوردة من نور' : `${stageIcon(stage)} ${stage}`;
+      html += `<div class="stage-block"><div class="stage-title"><span class="bar"></span>${label}</div><div class="classes-grid">`;
       groups[stage].forEach(c => {
         const avg = c.students.length ? Math.round(c.students.reduce((a,s)=>a+s.score,0) / c.students.length) : 0;
         html += `

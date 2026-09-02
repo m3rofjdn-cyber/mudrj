@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — استيراد من نور</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F; --ok-bg:#E9F4EC;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+  header{ background:var(--ink); color:#fff; padding:16px 32px; display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .title{ font-weight:600; font-size:17px; }
+
+  main{ max-width:760px; margin:0 auto; padding:36px 24px 80px; }
+  .step-title{ font-size:19px; font-weight:600; margin-bottom:6px; }
+  .step-sub{ color:var(--text-mute); font-size:13.5px; font-weight:300; margin-bottom:24px; }
+
+  .dropzone{
+    border:2px dashed var(--line); border-radius:14px; padding:48px 24px; text-align:center;
+    background:var(--card); cursor:pointer; transition:border-color .15s ease;
+  }
+  .dropzone.drag{ border-color:var(--gold); background:#FFFCF5; }
+  .dropzone .icon{ font-size:34px; margin-bottom:10px; }
+  .dropzone .main-text{ font-size:14.5px; font-weight:500; }
+  .dropzone .sub-text{ font-size:12.5px; color:var(--text-mute); font-weight:300; margin-top:4px; }
+  #fileInput{ display:none; }
+
+  .howto{
+    margin-top:20px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+    font-size:13px; color:var(--text-mute); font-weight:300; line-height:1.9;
+  }
+  .howto b{ color:var(--text); font-weight:600; }
+
+  .alert{ display:none; padding:12px 14px; border-radius:10px; font-size:13.5px; margin-bottom:18px; font-weight:500; }
+  .alert.show{ display:block; }
+  .alert.error{ background:var(--danger-bg); color:var(--danger); }
+  .alert.success{ background:var(--ok-bg); color:var(--ok); }
+
+  .loading-box{ display:none; text-align:center; padding:40px; color:var(--text-mute); }
+  .loading-box.show{ display:block; }
+  .spinner-big{ width:32px; height:32px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--ink); animation:spin .8s linear infinite; margin:0 auto 14px; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .preview{ display:none; }
+  .preview.show{ display:block; }
+  .group-card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
+  .group-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .group-head input{
+    flex:1; padding:9px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:14px; font-weight:600;
+  }
+  .group-count{ font-size:12px; color:var(--text-mute); white-space:nowrap; }
+  .names-box{
+    display:flex; flex-wrap:wrap; gap:6px; max-height:160px; overflow-y:auto; padding:4px 2px;
+  }
+  .name-chip{
+    background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:5px 12px;
+    font-size:12.5px; display:flex; align-items:center; gap:6px;
+  }
+  .name-chip button{ background:none; border:none; color:var(--text-mute); cursor:pointer; font-size:12px; }
+  .name-chip button:hover{ color:var(--danger); }
+  .group-remove{ background:none; border:none; color:var(--text-mute); font-size:13px; cursor:pointer; }
+  .group-remove:hover{ color:var(--danger); }
+
+  .confirm-bar{ display:flex; gap:10px; margin-top:20px; }
+  .btn-primary{
+    flex:1; padding:13px; border:none; border-radius:10px; background:var(--ink); color:#fff;
+    font-family:inherit; font-size:15px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary:disabled{ opacity:0.7; }
+  .btn-ghost{ padding:13px 20px; border:1px solid var(--line); border-radius:10px; background:none; font-family:inherit; font-size:14px; cursor:pointer; color:var(--text-mute); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="location.href='/dashboard.html'">→</button>
+  <div class="title">📥 استيراد من نور</div>
+</header>
+
+<main>
+  <div class="alert" id="alertBox"></div>
+
+  <!-- خطوة الرفع -->
+  <div id="uploadStep">
+    <div class="step-title">ارفع ملف الفصول من نور</div>
+    <div class="step-sub">صدّر كشف الطلاب من نور بصيغة Excel أو PDF، وارفعه هنا — بنحلله ونجهزلك الفصول والطلاب تلقائيًا.</div>
+
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📄</div>
+      <div class="main-text">اضغط لاختيار ملف أو اسحبه هنا</div>
+      <div class="sub-text">Excel (.xlsx) أو PDF — حتى ١٠ ميجا</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.pdf">
+    </div>
+
+    <div class="howto">
+      <b>وين ألقى الملف بنور؟</b> من داخل نور، افتح صفحة "المعلمين" ← "كشف الطلاب" أو "بيانات الفصل"، وابحث عن خيار تصدير (تصدير Excel أو طباعة PDF). كل فصل بورقة/شيت لحاله يعطي نتيجة أدق.
+    </div>
+  </div>
+
+  <div class="loading-box" id="loadingBox">
+    <div class="spinner-big"></div>
+    <div>جارٍ تحليل الملف...</div>
+  </div>
+
+  <!-- خطوة المعاينة -->
+  <div class="preview" id="previewStep">
+    <div class="step-title">راجع قبل الاستيراد</div>
+    <div class="step-sub">عدّل اسم أي فصل، احذف أي اسم مو صحيح، أو احذف فصل كامل ما تبيه.</div>
+    <div id="groupsContainer"></div>
+    <div class="confirm-bar">
+      <button class="btn-ghost" onclick="resetImport()">إلغاء</button>
+      <button class="btn-primary" id="confirmBtn" onclick="confirmImport()">
+        <span id="confirmBtnText">استيراد للمنصة</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  let parsedGroups = [];
+
+  function showAlert(msg, type){
+    const box = document.getElementById('alertBox');
+    box.textContent = msg; box.className = 'alert show ' + type;
+  }
+  function hideAlert(){ document.getElementById('alertBox').className = 'alert'; }
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  fileInput.addEventListener('change', () => { if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+
+  async function handleFile(file){
+    hideAlert();
+    document.getElementById('uploadStep').style.display = 'none';
+    document.getElementById('loadingBox').classList.add('show');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try{
+      const res = await fetch('/api/import/parse', {
+        method:'POST',
+        headers:{ 'Authorization':'Bearer ' + token },
+        body: formData
+      });
+      const data = await res.json();
+      document.getElementById('loadingBox').classList.remove('show');
+
+      if(!data.success){
+        showAlert(data.message || 'تعذر تحليل الملف', 'error');
+        document.getElementById('uploadStep').style.display = 'block';
+        return;
+      }
+
+      parsedGroups = data.groups;
+      renderPreview();
+    } catch(err){
+      document.getElementById('loadingBox').classList.remove('show');
+      document.getElementById('uploadStep').style.display = 'block';
+      showAlert('تعذر الاتصال بالسيرفر', 'error');
+    }
+  }
+
+  function renderPreview(){
+    document.getElementById('previewStep').classList.add('show');
+    const container = document.getElementById('groupsContainer');
+    container.innerHTML = parsedGroups.map((g, gi) => `
+      <div class="group-card" data-group="${gi}">
+        <div class="group-head">
+          <input type="text" value="${g.suggestedClassName}" onchange="parsedGroups[${gi}].suggestedClassName=this.value">
+          <span class="group-count">${g.students.length} طالب</span>
+          <button class="group-remove" onclick="removeGroup(${gi})">حذف الفصل</button>
+        </div>
+        <div class="names-box" id="names-${gi}"></div>
+      </div>
+    `).join('');
+    parsedGroups.forEach((g, gi) => renderNames(gi));
+  }
+
+  function renderNames(gi){
+    const box = document.getElementById('names-' + gi);
+    box.innerHTML = parsedGroups[gi].students.map((name, ni) => `
+      <span class="name-chip">${name}<button onclick="removeName(${gi},${ni})">✕</button></span>
+    `).join('');
+  }
+
+  function removeName(gi, ni){
+    parsedGroups[gi].students.splice(ni, 1);
+    renderNames(gi);
+    document.querySelector(`.group-card[data-group="${gi}"] .group-count`).textContent = parsedGroups[gi].students.length + ' طالب';
+  }
+
+  function removeGroup(gi){
+    parsedGroups.splice(gi, 1);
+    renderPreview();
+  }
+
+  function resetImport(){
+    parsedGroups = [];
+    document.getElementById('previewStep').classList.remove('show');
+    document.getElementById('uploadStep').style.display = 'block';
+    fileInput.value = '';
+    hideAlert();
+  }
+
+  async function confirmImport(){
+    hideAlert();
+    const classes = parsedGroups
+      .filter(g => g.students.length > 0)
+      .map(g => ({ name: g.suggestedClassName, students: g.students }));
+
+    if(classes.length === 0){ showAlert('ما فيه فصول للاستيراد', 'error'); return; }
+
+    const btn = document.getElementById('confirmBtn');
+    const btnText = document.getElementById('confirmBtnText');
+    btn.disabled = true; btnText.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;"></span> جارٍ الحفظ...';
+
+    try{
+      const res = await fetch('/api/import/confirm', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token },
+        body: JSON.stringify({ classes })
+      });
+      const data = await res.json();
+      btn.disabled = false; btnText.textContent = 'استيراد للمنصة';
+
+      if(!data.success){ showAlert(data.message || 'تعذر الحفظ', 'error'); return; }
+
+      showAlert(`تم استيراد ${data.importedClasses} فصل و ${data.importedStudents} طالب بنجاح`, 'success');
+      setTimeout(() => location.href = '/dashboard.html', 1200);
+    } catch(err){
+      btn.disabled = false; btnText.textContent = 'استيراد للمنصة';
+      showAlert('تعذر الاتصال بالسيرفر', 'error');
+    }
+  }
+</script>
+</body>
+</html>
