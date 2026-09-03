@@ -127,22 +127,57 @@
   .empty{ text-align:center; padding:48px 24px; background:var(--card); border:1px dashed var(--line); border-radius:14px; color:var(--text-mute); font-size:13.5px; font-weight:300; }
 
   /* ===== مركز الألعاب ===== */
-  .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px; }
+  .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:18px; }
   .game-card{
-    border-radius:16px; padding:28px 16px; text-align:center; cursor:pointer;
+    border-radius:20px; padding:38px 18px; text-align:center; cursor:pointer;
     transition:transform .15s ease, box-shadow .15s ease; border:1px solid rgba(0,0,0,0.04);
   }
-  .game-card:hover{ transform:translateY(-3px); box-shadow:0 12px 24px -12px rgba(22,33,62,0.25); }
-  .game-card.soon{ cursor:default; opacity:0.65; }
+  .game-card:hover{ transform:translateY(-4px); box-shadow:0 16px 30px -14px rgba(22,33,62,0.28); }
+  .game-card.soon{ cursor:default; opacity:0.6; }
   .game-card.soon:hover{ transform:none; box-shadow:none; }
-  .game-emoji{ font-size:36px; margin-bottom:10px; }
-  .game-name{ font-size:15px; font-weight:700; color:var(--ink); }
-  .game-desc{ font-size:12px; color:var(--text-mute); font-weight:300; margin-top:4px; }
+  .game-emoji{ font-size:56px; margin-bottom:14px; line-height:1; }
+  .game-name{ font-size:16.5px; font-weight:700; color:var(--ink); }
+  .game-desc{ font-size:12.5px; color:var(--text-mute); font-weight:300; margin-top:5px; }
 
   .game-header{ display:flex; align-items:center; gap:16px; margin-bottom:18px; }
   .game-back{ background:none; border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-family:inherit; font-size:13px; cursor:pointer; color:var(--text-mute); }
   .game-back:hover{ background:var(--card); }
   .game-title{ font-size:17px; font-weight:600; }
+
+  /* ===== إعداد فرق الأربعة ترجح ===== */
+  .c4-setup-box{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; text-align:center; max-width:520px; margin:0 auto; }
+  .c4-setup-title{ font-size:17px; font-weight:600; margin-bottom:6px; }
+  .c4-setup-sub{ font-size:13px; color:var(--text-mute); font-weight:300; margin-bottom:20px; }
+  .c4-teams-preview{ display:none; grid-template-columns:1fr 1fr; gap:14px; margin-top:24px; text-align:right; }
+  .c4-teams-preview.show{ display:grid; }
+  .team-box{ border-radius:12px; padding:14px; }
+  .team-box.red{ background:#FBEAE4; }
+  .team-box.blue{ background:#E8EFFB; }
+  .team-box .t-title{ font-size:13px; font-weight:700; margin-bottom:8px; }
+  .team-box.red .t-title{ color:var(--danger); }
+  .team-box.blue .t-title{ color:#2A5DB0; }
+  .team-box ul{ list-style:none; font-size:12.5px; }
+  .team-box li{ padding:3px 0; }
+
+  /* ===== بطاقة السؤال الحالية باللعب ===== */
+  .c4-turn-card{
+    max-width:480px; margin:0 auto 20px; border-radius:16px; padding:22px; text-align:center;
+    transition:background .2s ease;
+  }
+  .c4-turn-card.team-red{ background:linear-gradient(135deg,#FBEAE4,#F8DCD2); }
+  .c4-turn-card.team-blue{ background:linear-gradient(135deg,#E8EFFB,#D9E5FA); }
+  .c4-turn-team{ font-size:13px; font-weight:700; margin-bottom:6px; }
+  .c4-turn-team.red{ color:var(--danger); }
+  .c4-turn-team.blue{ color:#2A5DB0; }
+  .c4-turn-student{ font-size:22px; font-weight:700; color:var(--ink); margin-bottom:16px; }
+  .c4-answer-btns{ display:flex; gap:10px; justify-content:center; }
+  .c4-answer-btns button{
+    padding:11px 26px; border:none; border-radius:10px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .c4-btn-correct{ background:var(--ok); color:#fff; }
+  .c4-btn-wrong{ background:var(--danger); color:#fff; }
+  .c4-drop-hint{ font-size:13px; color:var(--text-mute); font-weight:500; }
+  .c4-winner-banner{ font-size:19px; font-weight:700; color:var(--ink); }
 
   /* ===== الأربعة ترجح ===== */
   .c4-status{ text-align:center; font-size:16px; font-weight:600; margin-bottom:16px; }
@@ -180,7 +215,6 @@
 <div class="tabs-bar">
   <button class="tabbtn active" data-tab="students" onclick="switchTab('students')">👥 الطلاب</button>
   <button class="tabbtn" data-tab="attendance" onclick="switchTab('attendance')">📋 التحضير</button>
-  <button class="tabbtn" data-tab="wheel" onclick="switchTab('wheel')">🎡 عجلة الطلاب</button>
   <button class="tabbtn" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏆 ترتيب الفصل</button>
   <button class="tabbtn" data-tab="games" onclick="switchTab('games')">🎮 ألعاب</button>
 </div>
@@ -209,18 +243,6 @@
     <div class="att-list" id="attList"></div>
   </section>
 
-  <!-- ===== العجلة ===== -->
-  <section class="view" id="view-wheel">
-    <div class="wheel-wrap">
-      <div class="wheel-area">
-        <div class="wheel-pointer"></div>
-        <canvas id="wheelCanvas" width="320" height="320"></canvas>
-      </div>
-      <button class="wheel-btn" id="spinBtn" onclick="spinWheel()">🎡 تدوير العجلة</button>
-      <div class="wheel-result" id="wheelResult"></div>
-    </div>
-  </section>
-
   <!-- ===== ترتيب الفصل ===== -->
   <section class="view" id="view-leaderboard">
     <div id="lbList"></div>
@@ -233,7 +255,12 @@
         <div class="game-card" style="background:linear-gradient(135deg,#EAF2FF,#DCE9FF);" onclick="openGame('connect4')">
           <div class="game-emoji">🔴🔵</div>
           <div class="game-name">الأربعة ترجح</div>
-          <div class="game-desc">لعبة تنافسية شيقة</div>
+          <div class="game-desc">فرق عشوائية + أسئلة</div>
+        </div>
+        <div class="game-card" style="background:linear-gradient(135deg,#F3E9FB,#E9D9F7);" onclick="openGame('wheel')">
+          <div class="game-emoji">🎡</div>
+          <div class="game-name">عجلة الأسماء</div>
+          <div class="game-desc">اختر طالب عشوائيًا</div>
         </div>
         <div class="game-card soon" style="background:linear-gradient(135deg,#FDEAF0,#FBDCE6);">
           <div class="game-emoji">🔤</div>
@@ -253,15 +280,46 @@
       </div>
     </div>
 
+    <!-- عجلة الأسماء -->
+    <div id="wheelGame" style="display:none;">
+      <div class="game-header">
+        <button class="game-back" onclick="closeGame()">→ رجوع للألعاب</button>
+        <div class="game-title">🎡 عجلة الأسماء</div>
+      </div>
+      <div class="wheel-wrap">
+        <div class="wheel-area">
+          <div class="wheel-pointer"></div>
+          <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        </div>
+        <button class="wheel-btn" id="spinBtn" onclick="spinWheel()">🎡 تدوير العجلة</button>
+        <div class="wheel-result" id="wheelResult"></div>
+      </div>
+    </div>
+
     <!-- الأربعة ترجح (Connect 4) -->
     <div id="connect4Game" style="display:none;">
       <div class="game-header">
         <button class="game-back" onclick="closeGame()">→ رجوع للألعاب</button>
         <div class="game-title">🔴🔵 الأربعة ترجح</div>
       </div>
-      <div class="c4-status" id="c4Status">دور اللاعب <span style="color:#B3432B;">الأحمر</span></div>
-      <div class="c4-board" id="c4Board"></div>
-      <button class="c4-reset" onclick="initConnect4()">🔄 لعبة جديدة</button>
+
+      <!-- خطوة تقسيم الفرق -->
+      <div id="c4SetupStep">
+        <div class="c4-setup-box">
+          <div class="c4-setup-title">قسّم الفصل لفريقين عشوائيًا</div>
+          <div class="c4-setup-sub">كل فريق ياخذ دور، ويجاوب أعضاءه بالترتيب على أسئلتك الشفهية</div>
+          <button class="wheel-btn" onclick="splitTeams()">🎲 قسّم الفصل الآن</button>
+          <div class="c4-teams-preview" id="teamsPreview"></div>
+          <button class="c4-reset" id="startC4Btn" style="display:none;" onclick="startConnect4()">▶️ ابدأ اللعبة</button>
+        </div>
+      </div>
+
+      <!-- خطوة اللعب -->
+      <div id="c4PlayStep" style="display:none;">
+        <div class="c4-turn-card" id="c4TurnCard"></div>
+        <div class="c4-board" id="c4Board"></div>
+        <button class="c4-reset" onclick="resetToSetup()">🔄 فرق جديدة / لعبة جديدة</button>
+      </div>
     </div>
   </section>
 
@@ -296,7 +354,6 @@
     document.querySelectorAll('.tabbtn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + tab).classList.add('active');
-    if(tab === 'wheel') drawWheel();
     if(tab === 'leaderboard') renderLeaderboard();
     if(tab === 'attendance' && !document.getElementById('attDate').value){
       document.getElementById('attDate').valueAsDate = new Date();
@@ -487,30 +544,117 @@
     `).join('');
   }
 
-  // ===== الأربعة ترجح (Connect 4) =====
+  // ===== الأربعة ترجح: تقسيم فرق + أسئلة =====
   const C4_ROWS = 6, C4_COLS = 7;
   let c4Grid = [];
-  let c4Turn = 'red';
   let c4Over = false;
+  let redTeam = [], blueTeam = [];
+  let redIdx = 0, blueIdx = 0;
+  let currentTeam = 'red';
+  let awaitingDrop = false;
 
   function openGame(name){
     document.getElementById('gamesHub').style.display = 'none';
     if(name === 'connect4'){
       document.getElementById('connect4Game').style.display = 'block';
-      initConnect4();
+      resetToSetup();
+    } else if(name === 'wheel'){
+      document.getElementById('wheelGame').style.display = 'block';
+      drawWheel();
     }
   }
   function closeGame(){
     document.getElementById('gamesHub').style.display = 'block';
     document.getElementById('connect4Game').style.display = 'none';
+    document.getElementById('wheelGame').style.display = 'none';
   }
 
-  function initConnect4(){
+  function resetToSetup(){
+    document.getElementById('c4SetupStep').style.display = 'block';
+    document.getElementById('c4PlayStep').style.display = 'none';
+    document.getElementById('teamsPreview').classList.remove('show');
+    document.getElementById('startC4Btn').style.display = 'none';
+  }
+
+  function shuffleArray(arr){
+    const a = [...arr];
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function splitTeams(){
+    if(currentStudents.length < 2){
+      alert('لازم فيه طالبين على الأقل بالفصل');
+      return;
+    }
+    const shuffled = shuffleArray(currentStudents);
+    redTeam = []; blueTeam = [];
+    shuffled.forEach((s, i) => { (i % 2 === 0 ? redTeam : blueTeam).push(s); });
+
+    const preview = document.getElementById('teamsPreview');
+    preview.innerHTML = `
+      <div class="team-box red"><div class="t-title">🔴 الفريق الأحمر (${redTeam.length})</div><ul>${redTeam.map(s=>`<li>${s.name}</li>`).join('')}</ul></div>
+      <div class="team-box blue"><div class="t-title">🔵 الفريق الأزرق (${blueTeam.length})</div><ul>${blueTeam.map(s=>`<li>${s.name}</li>`).join('')}</ul></div>
+    `;
+    preview.classList.add('show');
+    document.getElementById('startC4Btn').style.display = 'inline-block';
+  }
+
+  function startConnect4(){
     c4Grid = Array.from({length: C4_ROWS}, () => Array(C4_COLS).fill(null));
-    c4Turn = 'red';
     c4Over = false;
+    redIdx = 0; blueIdx = 0;
+    currentTeam = 'red';
+    awaitingDrop = false;
+
+    document.getElementById('c4SetupStep').style.display = 'none';
+    document.getElementById('c4PlayStep').style.display = 'block';
     renderConnect4();
-    updateC4Status();
+    showNextQuestion();
+  }
+
+  function currentTeamQueue(){ return currentTeam === 'red' ? redTeam : blueTeam; }
+  function currentTeamIdx(){ return currentTeam === 'red' ? redIdx : blueIdx; }
+  function advanceTeamIdx(){
+    if(currentTeam === 'red') redIdx = (redIdx + 1) % redTeam.length;
+    else blueIdx = (blueIdx + 1) % blueTeam.length;
+  }
+
+  function showNextQuestion(){
+    if(c4Over) return;
+    const queue = currentTeamQueue();
+    const student = queue[currentTeamIdx()];
+    const card = document.getElementById('c4TurnCard');
+    card.className = 'c4-turn-card ' + (currentTeam === 'red' ? 'team-red' : 'team-blue');
+    const teamLabel = currentTeam === 'red' ? '🔴 دور الفريق الأحمر' : '🔵 دور الفريق الأزرق';
+    card.innerHTML = `
+      <div class="c4-turn-team ${currentTeam}">${teamLabel}</div>
+      <div class="c4-turn-student">${student.name}</div>
+      <div class="c4-answer-btns">
+        <button class="c4-btn-correct" onclick="answerResult(true)">✅ إجابة صحيحة</button>
+        <button class="c4-btn-wrong" onclick="answerResult(false)">❌ إجابة خاطئة</button>
+      </div>
+    `;
+    awaitingDrop = false;
+  }
+
+  function answerResult(correct){
+    if(correct){
+      awaitingDrop = true;
+      const card = document.getElementById('c4TurnCard');
+      const teamColor = currentTeam === 'red' ? 'الأحمر' : 'الأزرق';
+      card.innerHTML = `
+        <div class="c4-turn-team ${currentTeam}">${currentTeam==='red'?'🔴':'🔵'} إجابة صحيحة!</div>
+        <div class="c4-drop-hint">اختر عمود بالشبكة تحت عشان تحط حلقة ${teamColor}</div>
+      `;
+    } else {
+      advanceTeamIdx();
+      currentTeam = currentTeam === 'red' ? 'blue' : 'red';
+      showNextQuestion();
+    }
   }
 
   function renderConnect4(){
@@ -531,39 +675,33 @@
     }
   }
 
-  function updateC4Status(){
-    const status = document.getElementById('c4Status');
-    if(c4Over) return;
-    const colorText = c4Turn === 'red' ? '<span style="color:#B3432B;">الأحمر</span>' : '<span style="color:#2A5DB0;">الأزرق</span>';
-    status.innerHTML = 'دور اللاعب ' + colorText;
-  }
-
   function dropC4Piece(col){
-    if(c4Over) return;
+    if(c4Over || !awaitingDrop) return;
     let targetRow = -1;
     for(let r = C4_ROWS - 1; r >= 0; r--){
       if(!c4Grid[r][col]){ targetRow = r; break; }
     }
     if(targetRow === -1) return;
 
-    c4Grid[targetRow][col] = c4Turn;
+    c4Grid[targetRow][col] = currentTeam;
     renderConnect4();
+    awaitingDrop = false;
 
-    if(checkC4Win(targetRow, col, c4Turn)){
+    if(checkC4Win(targetRow, col, currentTeam)){
       c4Over = true;
-      const colorText = c4Turn === 'red' ? '🔴 الأحمر' : '🔵 الأزرق';
-      document.getElementById('c4Status').innerHTML = `🎉 فاز اللاعب ${colorText}!`;
+      const colorText = currentTeam === 'red' ? '🔴 الفريق الأحمر' : '🔵 الفريق الأزرق';
+      document.getElementById('c4TurnCard').innerHTML = `<div class="c4-winner-banner">🎉 فاز ${colorText}!</div>`;
       return;
     }
-
     if(c4Grid.every(row => row.every(cell => cell))){
       c4Over = true;
-      document.getElementById('c4Status').textContent = '🤝 تعادل! الشبكة اكتملت';
+      document.getElementById('c4TurnCard').innerHTML = `<div class="c4-winner-banner">🤝 تعادل! الشبكة اكتملت</div>`;
       return;
     }
 
-    c4Turn = c4Turn === 'red' ? 'blue' : 'red';
-    updateC4Status();
+    advanceTeamIdx();
+    currentTeam = currentTeam === 'red' ? 'blue' : 'red';
+    showNextQuestion();
   }
 
   function checkC4Win(row, col, color){
