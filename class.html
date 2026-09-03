@@ -179,6 +179,27 @@
   .c4-drop-hint{ font-size:13px; color:var(--text-mute); font-weight:500; }
   .c4-winner-banner{ font-size:19px; font-weight:700; color:var(--ink); }
 
+  /* ===== القطار السريع ===== */
+  .train-track-wrap{ max-width:600px; margin:20px auto 0; overflow:hidden; }
+  .train-track{ position:relative; height:70px; }
+  .train-rail{
+    position:absolute; bottom:14px; right:0; left:0; height:4px; background:var(--line);
+    background-image:repeating-linear-gradient(90deg, var(--text-mute) 0 10px, transparent 10px 22px);
+    opacity:0.5;
+  }
+  .train-emoji{
+    position:absolute; bottom:0; right:0; font-size:44px; transition:transform 0s;
+  }
+  .train-emoji.chugging{ animation:chug 0.4s ease-in-out infinite; }
+  @keyframes chug{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4px); } }
+
+  .train-display{
+    max-width:460px; margin:26px auto; background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:28px; text-align:center; font-size:24px; font-weight:700; color:var(--ink);
+    min-height:32px; transition:background .2s ease;
+  }
+  .train-display.landed{ background:linear-gradient(135deg,#FBF3E5,#F7E8CE); color:var(--ink); }
+
   /* ===== الأربعة ترجح ===== */
   .c4-status{ text-align:center; font-size:16px; font-weight:600; margin-bottom:16px; }
   .c4-board{
@@ -267,10 +288,10 @@
           <div class="game-name">خلية الحروف</div>
           <div class="game-desc">قريبًا</div>
         </div>
-        <div class="game-card soon" style="background:linear-gradient(135deg,#EAF5EA,#DCEEDC);">
+        <div class="game-card" style="background:linear-gradient(135deg,#EAF5EA,#DCEEDC);" onclick="openGame('train')">
           <div class="game-emoji">🚂</div>
           <div class="game-name">القطار السريع</div>
-          <div class="game-desc">قريبًا</div>
+          <div class="game-desc">اختيار عشوائي تفاعلي</div>
         </div>
         <div class="game-card soon" style="background:linear-gradient(135deg,#FBF3E5,#F7E8CE);">
           <div class="game-emoji">🎁</div>
@@ -320,6 +341,25 @@
         <div class="c4-board" id="c4Board"></div>
         <button class="c4-reset" onclick="resetToSetup()">🔄 فرق جديدة / لعبة جديدة</button>
       </div>
+    </div>
+
+    <!-- القطار السريع -->
+    <div id="trainGame" style="display:none;">
+      <div class="game-header">
+        <button class="game-back" onclick="closeGame()">→ رجوع للألعاب</button>
+        <div class="game-title">🚂 القطار السريع</div>
+      </div>
+
+      <div class="train-track-wrap">
+        <div class="train-track">
+          <div class="train-rail"></div>
+          <div class="train-emoji" id="trainEmoji">🚂</div>
+        </div>
+      </div>
+
+      <div class="train-display" id="trainDisplay">اضغط "انطلق" لاختيار طالب</div>
+
+      <button class="wheel-btn" id="trainGoBtn" onclick="startTrain()">🚂 انطلق!</button>
     </div>
   </section>
 
@@ -561,12 +601,16 @@
     } else if(name === 'wheel'){
       document.getElementById('wheelGame').style.display = 'block';
       drawWheel();
+    } else if(name === 'train'){
+      document.getElementById('trainGame').style.display = 'block';
+      resetTrainVisual();
     }
   }
   function closeGame(){
     document.getElementById('gamesHub').style.display = 'block';
     document.getElementById('connect4Game').style.display = 'none';
     document.getElementById('wheelGame').style.display = 'none';
+    document.getElementById('trainGame').style.display = 'none';
   }
 
   function resetToSetup(){
@@ -717,6 +761,62 @@
       if(count >= 4) return true;
     }
     return false;
+  }
+
+  // ===== القطار السريع =====
+  let trainRunning = false;
+
+  function resetTrainVisual(){
+    const emoji = document.getElementById('trainEmoji');
+    emoji.style.transform = 'translateX(0)';
+    emoji.classList.remove('chugging');
+    const display = document.getElementById('trainDisplay');
+    display.textContent = 'اضغط "انطلق" لاختيار طالب';
+    display.classList.remove('landed');
+  }
+
+  function startTrain(){
+    if(trainRunning) return;
+    if(currentStudents.length === 0){ alert('ما فيه طلاب بهذا الفصل'); return; }
+
+    trainRunning = true;
+    const btn = document.getElementById('trainGoBtn');
+    btn.disabled = true;
+    const display = document.getElementById('trainDisplay');
+    display.classList.remove('landed');
+    const emoji = document.getElementById('trainEmoji');
+    emoji.classList.add('chugging');
+
+    const track = document.querySelector('.train-track');
+    const trackWidth = track.offsetWidth - 50;
+
+    const winner = currentStudents[Math.floor(Math.random() * currentStudents.length)];
+    const totalSteps = 22;
+    let step = 0;
+
+    function tick(){
+      step++;
+      // تسارع بالبداية وتباطؤ قرب النهاية (منحنى سهل)
+      const progress = step / totalSteps;
+      const eased = progress < 0.6 ? progress * 1.15 : 0.69 + (progress - 0.6) * 0.775;
+      const posRatio = Math.min(eased, 1);
+      emoji.style.transform = `translateX(${-trackWidth * posRatio}px)`;
+
+      if(step < totalSteps){
+        const randomName = currentStudents[Math.floor(Math.random() * currentStudents.length)].name;
+        display.textContent = randomName;
+        // كل خطوة أبطأ من اللي قبلها (تسارع بالتأخير)
+        const delay = 60 + Math.pow(step / totalSteps, 2) * 260;
+        setTimeout(tick, delay);
+      } else {
+        display.textContent = winner.name;
+        display.classList.add('landed');
+        emoji.classList.remove('chugging');
+        trainRunning = false;
+        btn.disabled = false;
+      }
+    }
+    tick();
   }
 
   loadClass();
