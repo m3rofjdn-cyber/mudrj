@@ -125,6 +125,43 @@
   .lb-score{ font-weight:700; color:var(--ink); font-size:14px; }
 
   .empty{ text-align:center; padding:48px 24px; background:var(--card); border:1px dashed var(--line); border-radius:14px; color:var(--text-mute); font-size:13.5px; font-weight:300; }
+
+  /* ===== مركز الألعاب ===== */
+  .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px; }
+  .game-card{
+    border-radius:16px; padding:28px 16px; text-align:center; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease; border:1px solid rgba(0,0,0,0.04);
+  }
+  .game-card:hover{ transform:translateY(-3px); box-shadow:0 12px 24px -12px rgba(22,33,62,0.25); }
+  .game-card.soon{ cursor:default; opacity:0.65; }
+  .game-card.soon:hover{ transform:none; box-shadow:none; }
+  .game-emoji{ font-size:36px; margin-bottom:10px; }
+  .game-name{ font-size:15px; font-weight:700; color:var(--ink); }
+  .game-desc{ font-size:12px; color:var(--text-mute); font-weight:300; margin-top:4px; }
+
+  .game-header{ display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+  .game-back{ background:none; border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-family:inherit; font-size:13px; cursor:pointer; color:var(--text-mute); }
+  .game-back:hover{ background:var(--card); }
+  .game-title{ font-size:17px; font-weight:600; }
+
+  /* ===== الأربعة ترجح ===== */
+  .c4-status{ text-align:center; font-size:16px; font-weight:600; margin-bottom:16px; }
+  .c4-board{
+    display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; max-width:420px; margin:0 auto;
+    background:var(--ink); padding:10px; border-radius:14px;
+  }
+  .c4-cell{
+    aspect-ratio:1; border-radius:50%; background:#0E1830; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:background .1s ease;
+  }
+  .c4-cell:hover{ background:#1A2748; }
+  .c4-piece{ width:82%; height:82%; border-radius:50%; }
+  .c4-piece.red{ background:radial-gradient(circle at 35% 30%, #E5674C, #B3432B); }
+  .c4-piece.blue{ background:radial-gradient(circle at 35% 30%, #4A7BC9, #2A5DB0); }
+  .c4-reset{
+    display:block; margin:22px auto 0; padding:11px 24px; border:none; border-radius:9px;
+    background:var(--ink); color:#fff; font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -145,6 +182,7 @@
   <button class="tabbtn" data-tab="attendance" onclick="switchTab('attendance')">📋 التحضير</button>
   <button class="tabbtn" data-tab="wheel" onclick="switchTab('wheel')">🎡 عجلة الطلاب</button>
   <button class="tabbtn" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏆 ترتيب الفصل</button>
+  <button class="tabbtn" data-tab="games" onclick="switchTab('games')">🎮 ألعاب</button>
 </div>
 
 <main>
@@ -186,6 +224,45 @@
   <!-- ===== ترتيب الفصل ===== -->
   <section class="view" id="view-leaderboard">
     <div id="lbList"></div>
+  </section>
+
+  <!-- ===== الألعاب ===== -->
+  <section class="view" id="view-games">
+    <div id="gamesHub">
+      <div class="games-grid">
+        <div class="game-card" style="background:linear-gradient(135deg,#EAF2FF,#DCE9FF);" onclick="openGame('connect4')">
+          <div class="game-emoji">🔴🔵</div>
+          <div class="game-name">الأربعة ترجح</div>
+          <div class="game-desc">لعبة تنافسية شيقة</div>
+        </div>
+        <div class="game-card soon" style="background:linear-gradient(135deg,#FDEAF0,#FBDCE6);">
+          <div class="game-emoji">🔤</div>
+          <div class="game-name">خلية الحروف</div>
+          <div class="game-desc">قريبًا</div>
+        </div>
+        <div class="game-card soon" style="background:linear-gradient(135deg,#EAF5EA,#DCEEDC);">
+          <div class="game-emoji">🚂</div>
+          <div class="game-name">القطار السريع</div>
+          <div class="game-desc">قريبًا</div>
+        </div>
+        <div class="game-card soon" style="background:linear-gradient(135deg,#FBF3E5,#F7E8CE);">
+          <div class="game-emoji">🎁</div>
+          <div class="game-name">كنز الأسئلة</div>
+          <div class="game-desc">قريبًا</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- الأربعة ترجح (Connect 4) -->
+    <div id="connect4Game" style="display:none;">
+      <div class="game-header">
+        <button class="game-back" onclick="closeGame()">→ رجوع للألعاب</button>
+        <div class="game-title">🔴🔵 الأربعة ترجح</div>
+      </div>
+      <div class="c4-status" id="c4Status">دور اللاعب <span style="color:#B3432B;">الأحمر</span></div>
+      <div class="c4-board" id="c4Board"></div>
+      <button class="c4-reset" onclick="initConnect4()">🔄 لعبة جديدة</button>
+    </div>
   </section>
 
 </main>
@@ -248,7 +325,7 @@
       <div class="student-box" id="student-${s.id}">
         <button class="sb-del" onclick="deleteStudent(${s.id})">حذف</button>
         <div class="sb-top">
-          <div class="sb-name">${s.name}</div>
+          <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.name}</div>
           <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
         </div>
         <div class="sb-badges" id="badges-${s.id}">⭐${s.stars||0} · ✔${s.corrects||0} · ✘${s.wrongs||0} · 📘${s.homeworks||0}</div>
@@ -408,6 +485,100 @@
         <div class="lb-score">${s.score}</div>
       </div>
     `).join('');
+  }
+
+  // ===== الأربعة ترجح (Connect 4) =====
+  const C4_ROWS = 6, C4_COLS = 7;
+  let c4Grid = [];
+  let c4Turn = 'red';
+  let c4Over = false;
+
+  function openGame(name){
+    document.getElementById('gamesHub').style.display = 'none';
+    if(name === 'connect4'){
+      document.getElementById('connect4Game').style.display = 'block';
+      initConnect4();
+    }
+  }
+  function closeGame(){
+    document.getElementById('gamesHub').style.display = 'block';
+    document.getElementById('connect4Game').style.display = 'none';
+  }
+
+  function initConnect4(){
+    c4Grid = Array.from({length: C4_ROWS}, () => Array(C4_COLS).fill(null));
+    c4Turn = 'red';
+    c4Over = false;
+    renderConnect4();
+    updateC4Status();
+  }
+
+  function renderConnect4(){
+    const board = document.getElementById('c4Board');
+    board.innerHTML = '';
+    for(let r = 0; r < C4_ROWS; r++){
+      for(let c = 0; c < C4_COLS; c++){
+        const cell = document.createElement('div');
+        cell.className = 'c4-cell';
+        cell.onclick = () => dropC4Piece(c);
+        if(c4Grid[r][c]){
+          const piece = document.createElement('div');
+          piece.className = 'c4-piece ' + c4Grid[r][c];
+          cell.appendChild(piece);
+        }
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  function updateC4Status(){
+    const status = document.getElementById('c4Status');
+    if(c4Over) return;
+    const colorText = c4Turn === 'red' ? '<span style="color:#B3432B;">الأحمر</span>' : '<span style="color:#2A5DB0;">الأزرق</span>';
+    status.innerHTML = 'دور اللاعب ' + colorText;
+  }
+
+  function dropC4Piece(col){
+    if(c4Over) return;
+    let targetRow = -1;
+    for(let r = C4_ROWS - 1; r >= 0; r--){
+      if(!c4Grid[r][col]){ targetRow = r; break; }
+    }
+    if(targetRow === -1) return;
+
+    c4Grid[targetRow][col] = c4Turn;
+    renderConnect4();
+
+    if(checkC4Win(targetRow, col, c4Turn)){
+      c4Over = true;
+      const colorText = c4Turn === 'red' ? '🔴 الأحمر' : '🔵 الأزرق';
+      document.getElementById('c4Status').innerHTML = `🎉 فاز اللاعب ${colorText}!`;
+      return;
+    }
+
+    if(c4Grid.every(row => row.every(cell => cell))){
+      c4Over = true;
+      document.getElementById('c4Status').textContent = '🤝 تعادل! الشبكة اكتملت';
+      return;
+    }
+
+    c4Turn = c4Turn === 'red' ? 'blue' : 'red';
+    updateC4Status();
+  }
+
+  function checkC4Win(row, col, color){
+    const directions = [[0,1],[1,0],[1,1],[1,-1]];
+    for(const [dr, dc] of directions){
+      let count = 1;
+      for(const sign of [1,-1]){
+        let r = row + dr*sign, c = col + dc*sign;
+        while(r >= 0 && r < C4_ROWS && c >= 0 && c < C4_COLS && c4Grid[r][c] === color){
+          count++; r += dr*sign; c += dc*sign;
+        }
+      }
+      if(count >= 4) return true;
+    }
+    return false;
   }
 
   loadClass();
