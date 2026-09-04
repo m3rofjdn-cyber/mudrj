@@ -59,13 +59,13 @@
   .sb-score{ font-size:13px; font-weight:700; color:var(--ink); background:var(--paper); padding:3px 10px; border-radius:20px; }
   .sb-score.neg{ color:var(--danger); }
   .sb-badges{ font-size:11.5px; color:var(--text-mute); font-weight:300; margin-bottom:12px; display:flex; gap:8px; }
-  .sb-actions{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-  .sb-btn{
-    padding:8px 4px; border:1px solid var(--line); border-radius:8px; background:var(--paper);
-    font-size:15px; cursor:pointer; transition:transform .1s ease, background .15s ease;
+  .sb-rate-btn{
+    width:100%; padding:9px; border:1px solid var(--line); border-radius:9px; background:var(--paper);
+    font-family:inherit; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
   }
-  .sb-btn:hover{ background:#fff; border-color:var(--ink-soft); }
-  .sb-btn:active{ transform:scale(0.92); }
+  .sb-rate-btn:hover{ background:#fff; border-color:var(--ink-soft); }
+  .sb-rate-btn:active{ transform:scale(0.97); }
   .sb-del{ position:absolute; top:12px; left:12px; background:none; border:none; color:var(--text-mute); font-size:13px; cursor:pointer; opacity:0; }
   .student-box:hover .sb-del{ opacity:1; }
   .sb-del:hover{ color:var(--danger); }
@@ -125,6 +125,60 @@
   .lb-score{ font-weight:700; color:var(--ink); font-size:14px; }
 
   .empty{ text-align:center; padding:48px 24px; background:var(--card); border:1px dashed var(--line); border-radius:14px; color:var(--text-mute); font-size:13.5px; font-weight:300; }
+
+  /* ===== لوحة الأوسمة المنبثقة (أبيض/أخضر) ===== */
+  .badge-overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,30,25,0.45); z-index:60;
+    align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(2px);
+  }
+  .badge-overlay.show{ display:flex; animation:overlayFade .2s ease; }
+  @keyframes overlayFade{ from{ opacity:0; } to{ opacity:1; } }
+
+  .badge-modal{
+    background:#FFFFFF; border-radius:20px; padding:26px; width:100%; max-width:640px;
+    max-height:86vh; overflow-y:auto; animation:modalPop .25s cubic-bezier(0.34,1.56,0.64,1);
+    border:1px solid #E3F3E8;
+  }
+  @keyframes modalPop{ from{ opacity:0; transform:scale(0.9) translateY(10px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+
+  .badge-modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .badge-modal-title{ font-size:17px; font-weight:700; color:#1B4332; }
+  .badge-modal-close{ background:#F1F8F3; border:none; width:32px; height:32px; border-radius:50%; font-size:15px; cursor:pointer; color:#3A7A54; transition:background .15s; }
+  .badge-modal-close:hover{ background:#DFF2E4; }
+  .badge-modal-sub{ font-size:12.5px; color:#6B8F79; font-weight:300; margin-bottom:18px; }
+
+  .badge-buttons-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:480px){ .badge-buttons-grid{ grid-template-columns:1fr; } }
+
+  .badge-btn{
+    display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; border:none;
+    cursor:pointer; font-family:inherit; text-align:right; transition:transform .12s ease, box-shadow .15s ease;
+    position:relative; overflow:hidden;
+  }
+  .badge-btn:active{ transform:scale(0.95); }
+  .badge-btn.pos{ background:#EAF7EE; }
+  .badge-btn.pos:hover{ background:#DBF2E1; box-shadow:0 4px 12px -6px rgba(47,110,79,0.35); }
+  .badge-btn.neg{ background:#F4F6F5; }
+  .badge-btn.neg:hover{ background:#EAEEEC; box-shadow:0 4px 12px -6px rgba(20,30,25,0.15); }
+  .badge-btn-icon{ font-size:22px; flex-shrink:0; }
+  .badge-btn-text{ flex:1; }
+  .badge-btn-label{ font-size:13.5px; font-weight:600; color:#20362A; }
+  .badge-btn-points{ font-size:11.5px; font-weight:700; margin-top:2px; }
+  .badge-btn.pos .badge-btn-points{ color:#2F6E4F; }
+  .badge-btn.neg .badge-btn-points{ color:#8A6A00; }
+
+  .badge-btn.clicked::after{
+    content:''; position:absolute; inset:0; background:#2F6E4F; opacity:0;
+    animation:badgeFlash .5s ease;
+  }
+  @keyframes badgeFlash{ 0%{ opacity:0.28; } 100%{ opacity:0; } }
+
+  .badge-toast{
+    position:fixed; bottom:26px; right:50%; transform:translateX(50%) translateY(20px); opacity:0;
+    background:#1B4332; color:#fff; padding:12px 22px; border-radius:30px; font-size:13.5px; font-weight:600;
+    z-index:70; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
+  }
+  .badge-toast.show{ opacity:1; transform:translateX(50%) translateY(0); }
 
   /* ===== مركز الألعاب ===== */
   .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:18px; }
@@ -365,6 +419,19 @@
 
 </main>
 
+<!-- لوحة الأوسمة المنبثقة -->
+<div class="badge-overlay" id="badgeOverlay" onclick="if(event.target===this) closeBadgePanel()">
+  <div class="badge-modal">
+    <div class="badge-modal-head">
+      <div class="badge-modal-title" id="badgeModalTitle">تقييم الطالب</div>
+      <button class="badge-modal-close" onclick="closeBadgePanel()">✕</button>
+    </div>
+    <div class="badge-modal-sub">اضغط أي وسام عشان تضيفه للطالب مباشرة</div>
+    <div class="badge-buttons-grid" id="badgeButtonsGrid"></div>
+  </div>
+</div>
+<div class="badge-toast" id="badgeToast"></div>
+
 <script>
   const token = localStorage.getItem('mudraj_token');
   if(!token){ window.location.href = '/'; }
@@ -425,32 +492,9 @@
           <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.name}</div>
           <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
         </div>
-        <div class="sb-badges" id="badges-${s.id}">⭐${s.stars||0} · ✔${s.corrects||0} · ✘${s.wrongs||0} · 📘${s.homeworks||0}</div>
-        <div class="sb-actions">
-          <button class="sb-btn" title="نجمة" onclick="rate(${s.id},'star')">⭐</button>
-          <button class="sb-btn" title="صح" onclick="rate(${s.id},'correct')">✔️</button>
-          <button class="sb-btn" title="خطأ" onclick="rate(${s.id},'wrong')">✘</button>
-          <button class="sb-btn" title="أكمل الواجب" onclick="rate(${s.id},'homework')">📘</button>
-        </div>
+        <button class="sb-rate-btn" onclick="openBadgePanel(${s.id})">🏅 قيّم الطالب</button>
       </div>
     `).join('');
-  }
-
-  async function rate(studentId, type){
-    const data = await api('/api/students/' + studentId + '/rate', { method:'POST', body: JSON.stringify({ type }) });
-    if(!data || !data.success) return;
-    const idx = currentStudents.findIndex(s => s.id === studentId);
-    if(idx > -1) currentStudents[idx] = data.student;
-
-    const scoreEl = document.getElementById('score-' + studentId);
-    scoreEl.textContent = data.student.score;
-    scoreEl.className = 'sb-score ' + (data.student.score < 0 ? 'neg' : '');
-    document.getElementById('badges-' + studentId).textContent =
-      `⭐${data.student.stars||0} · ✔${data.student.corrects||0} · ✘${data.student.wrongs||0} · 📘${data.student.homeworks||0}`;
-
-    const box = document.getElementById('student-' + studentId);
-    box.classList.add('flash');
-    setTimeout(() => box.classList.remove('flash'), 400);
   }
 
   async function addStudent(){
@@ -817,6 +861,76 @@
       }
     }
     tick();
+  }
+
+  // ===== لوحة الأوسمة =====
+  let BADGES_CACHE = null;
+  let activeBadgeStudentId = null;
+
+  async function loadBadgesConfig(){
+    if(BADGES_CACHE) return BADGES_CACHE;
+    const data = await api('/api/badges');
+    if(data && data.success){ BADGES_CACHE = data.badges; }
+    return BADGES_CACHE;
+  }
+
+  async function openBadgePanel(studentId){
+    activeBadgeStudentId = studentId;
+    const student = currentStudents.find(s => s.id === studentId);
+    document.getElementById('badgeModalTitle').textContent = 'تقييم: ' + (student ? student.name : '');
+
+    const badges = await loadBadgesConfig();
+    const grid = document.getElementById('badgeButtonsGrid');
+    if(!badges){ grid.innerHTML = '<div class="empty">تعذر تحميل الأوسمة</div>'; }
+    else {
+      grid.innerHTML = Object.entries(badges).map(([key, b]) => `
+        <button class="badge-btn ${b.points >= 0 ? 'pos' : 'neg'}" onclick="applyBadge('${key}', this)">
+          <span class="badge-btn-icon">${b.icon}</span>
+          <span class="badge-btn-text">
+            <div class="badge-btn-label">${b.label}</div>
+            <div class="badge-btn-points">${b.points > 0 ? '+' : ''}${b.points}</div>
+          </span>
+        </button>
+      `).join('');
+    }
+
+    document.getElementById('badgeOverlay').classList.add('show');
+  }
+
+  function closeBadgePanel(){
+    document.getElementById('badgeOverlay').classList.remove('show');
+    activeBadgeStudentId = null;
+  }
+
+  function showBadgeToast(msg){
+    const toast = document.getElementById('badgeToast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1400);
+  }
+
+  async function applyBadge(type, btnEl){
+    if(!activeBadgeStudentId) return;
+    btnEl.classList.add('clicked');
+    setTimeout(() => btnEl.classList.remove('clicked'), 500);
+
+    const studentId = activeBadgeStudentId;
+    const data = await api('/api/students/' + studentId + '/rate', { method:'POST', body: JSON.stringify({ type }) });
+    if(!data || !data.success) return;
+
+    const idx = currentStudents.findIndex(s => s.id === studentId);
+    if(idx > -1) currentStudents[idx] = data.student;
+
+    const scoreEl = document.getElementById('score-' + studentId);
+    if(scoreEl){
+      scoreEl.textContent = data.student.score;
+      scoreEl.className = 'sb-score ' + (data.student.score < 0 ? 'neg' : '');
+    }
+    const box = document.getElementById('student-' + studentId);
+    if(box){ box.classList.add('flash'); setTimeout(() => box.classList.remove('flash'), 400); }
+
+    const badge = BADGES_CACHE[type];
+    showBadgeToast(`${badge.icon} ${badge.label} — النقاط الآن: ${data.student.score}`);
   }
 
   loadClass();

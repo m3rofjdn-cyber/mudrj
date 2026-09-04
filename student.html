@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — ملف الطالب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F; --ok-bg:#E9F4EC;
+    --info:#2A5DB0; --info-bg:#E8EFFB;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+
+  header{
+    background:var(--ink); color:#fff; padding:16px 32px;
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20;
+  }
+  .head-left{ display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .head-title{ font-weight:600; font-size:16px; }
+
+  main{ max-width:920px; margin:0 auto; padding:32px 24px 80px; }
+
+  .profile-top{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:26px; display:flex; align-items:center; gap:22px; margin-bottom:20px; flex-wrap:wrap;
+  }
+  .avatar{
+    width:76px; height:76px; border-radius:50%; background:var(--ink);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; font-weight:600;
+    flex-shrink:0;
+  }
+  .p-info{ flex:1; min-width:180px; }
+  .p-name{ font-size:21px; font-weight:600; }
+  .p-class{ color:var(--text-mute); font-size:13.5px; font-weight:300; margin-top:2px; }
+  .p-score{
+    display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:13.5px;
+    background:var(--paper); padding:5px 12px; border-radius:20px; color:var(--ink); font-weight:600;
+  }
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:700px){ .grid-2{ grid-template-columns:1fr; } }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .card-title{ font-size:14px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .card-title .bar{ width:4px; height:14px; background:var(--gold); border-radius:2px; }
+
+  .ring-row{ display:flex; align-items:center; gap:16px; }
+  .ring{ position:relative; width:76px; height:76px; flex-shrink:0; }
+  .ring svg{ transform:rotate(-90deg); }
+  .ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:var(--ink); }
+  .ring-label{ font-size:12.5px; color:var(--text-mute); font-weight:300; }
+
+  .stat-mini-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
+  .stat-mini{ background:var(--paper); border-radius:10px; padding:10px; text-align:center; }
+  .stat-mini .num{ font-size:17px; font-weight:700; }
+  .stat-mini .lbl{ font-size:11px; color:var(--text-mute); font-weight:300; margin-top:2px; }
+  .stat-mini.present .num{ color:var(--ok); }
+  .stat-mini.late .num{ color:var(--gold); }
+  .stat-mini.absent .num{ color:var(--danger); }
+
+  .badge-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .badge-mini{ background:var(--paper); border-radius:10px; padding:12px 6px; text-align:center; }
+  .badge-mini .icon{ font-size:20px; }
+  .badge-mini .num{ font-size:16px; font-weight:700; margin-top:4px; }
+  .badge-mini .lbl{ font-size:10.5px; color:var(--text-mute); font-weight:300; margin-top:2px; }
+
+  .notes-area{
+    width:100%; min-height:90px; border:1px solid var(--line); border-radius:10px; padding:12px;
+    font-family:inherit; font-size:13.5px; resize:vertical; background:var(--paper);
+  }
+  .notes-area:focus{ outline:none; border-color:var(--ink-soft); background:#fff; }
+  .save-hint{ font-size:11.5px; color:var(--text-mute); font-weight:300; margin-top:8px; min-height:16px; }
+
+  .activity-item{
+    display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .activity-item:last-child{ border-bottom:none; }
+  .activity-dot{
+    width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0;
+  }
+  .activity-dot.pos{ background:var(--ok-bg); color:var(--ok); }
+  .activity-dot.neg{ background:var(--danger-bg); color:var(--danger); }
+  .activity-label{ flex:1; font-size:13.5px; }
+  .activity-time{ font-size:11.5px; color:var(--text-mute); font-weight:300; white-space:nowrap; }
+
+  .empty-note{ text-align:center; color:var(--text-mute); font-size:13px; font-weight:300; padding:20px; }
+  .loading{ text-align:center; padding:60px; color:var(--text-mute); }
+  .spinner-big{ width:32px; height:32px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--ink); animation:spin .8s linear infinite; margin:0 auto 14px; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-left">
+    <button class="back-btn" id="backBtn" onclick="history.back()">→</button>
+    <div class="head-title">ملف الطالب</div>
+  </div>
+</header>
+
+<main>
+  <div class="loading" id="loadingBox">
+    <div class="spinner-big"></div>
+    جارٍ تحميل ملف الطالب...
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="profile-top">
+      <div class="avatar" id="avatar"></div>
+      <div class="p-info">
+        <div class="p-name" id="pName"></div>
+        <div class="p-class" id="pClass"></div>
+        <div class="p-score" id="pScore"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>نسبة الحضور</div>
+        <div class="ring-row">
+          <div class="ring">
+            <svg width="76" height="76">
+              <circle cx="38" cy="38" r="32" stroke="#E4DFD1" stroke-width="8" fill="none"/>
+              <circle id="attRing" cx="38" cy="38" r="32" stroke="#2F6E4F" stroke-width="8" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div class="ring-pct" id="attPct">—</div>
+          </div>
+          <div class="ring-label" id="attLabel">ما فيه تحضير مسجّل بعد</div>
+        </div>
+        <div class="stat-mini-row">
+          <div class="stat-mini present"><div class="num" id="presentCount">0</div><div class="lbl">حاضر</div></div>
+          <div class="stat-mini late"><div class="num" id="lateCount">0</div><div class="lbl">متأخر</div></div>
+          <div class="stat-mini absent"><div class="num" id="absentCount">0</div><div class="lbl">غائب</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>نسبة التقييم الإيجابي</div>
+        <div class="ring-row">
+          <div class="ring">
+            <svg width="76" height="76">
+              <circle cx="38" cy="38" r="32" stroke="#E4DFD1" stroke-width="8" fill="none"/>
+              <circle id="posRing" cx="38" cy="38" r="32" stroke="#C9922B" stroke-width="8" fill="none" stroke-linecap="round"/>
+            </svg>
+            <div class="ring-pct" id="posPct">—</div>
+          </div>
+          <div class="ring-label" id="posLabel">ما فيه تقييمات بعد</div>
+        </div>
+        <div class="badge-grid" id="badgeGrid" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>ملاحظات الطالب</div>
+        <textarea class="notes-area" id="notesArea" placeholder="اكتب ملاحظاتك هنا..." oninput="scheduleSaveNotes()"></textarea>
+        <div class="save-hint" id="saveHint"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="bar"></span>النشاطات الأخيرة</div>
+        <div id="activitiesList"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  const params = new URLSearchParams(window.location.search);
+  const studentId = params.get('id');
+  if(!studentId){ window.location.href = '/dashboard.html'; }
+
+  async function api(path, options={}){
+    const res = await fetch(path, {
+      ...options,
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...(options.headers||{}) }
+    });
+    if(res.status === 401 || res.status === 403){ window.location.href = '/'; return; }
+    return res.json();
+  }
+
+  function setRing(elId, pct){
+    const circle = document.getElementById(elId);
+    const circumference = 2 * Math.PI * 32;
+    circle.style.strokeDasharray = circumference;
+    circle.style.strokeDashoffset = circumference - (pct/100) * circumference;
+  }
+
+  function timeAgo(dateStr){
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if(mins < 1) return 'الآن';
+    if(mins < 60) return `منذ ${mins} دقيقة`;
+    const hrs = Math.floor(mins / 60);
+    if(hrs < 24) return `منذ ${hrs} ساعة`;
+    const days = Math.floor(hrs / 24);
+    return `منذ ${days} يوم`;
+  }
+
+  async function loadProfile(){
+    const data = await api('/api/students/' + studentId + '/profile');
+    if(!data || !data.success){
+      document.getElementById('loadingBox').textContent = 'تعذر تحميل ملف الطالب';
+      return;
+    }
+
+    document.getElementById('loadingBox').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('backBtn').onclick = () => location.href = '/class.html?id=' + data.student.classId;
+
+    document.getElementById('avatar').textContent = data.student.name.trim().charAt(0);
+    document.getElementById('pName').textContent = data.student.name;
+    document.getElementById('pClass').textContent = data.student.className;
+    document.getElementById('pScore').textContent = '🏅 ' + data.student.score + ' نقطة';
+    document.getElementById('notesArea').value = data.student.notes || '';
+
+    const badgeGrid = document.getElementById('badgeGrid');
+    if(data.badgeCounts && data.badgeCounts.length > 0){
+      badgeGrid.innerHTML = data.badgeCounts.slice(0, 8).map(b => `
+        <div class="badge-mini"><div class="icon">${b.icon}</div><div class="num">${b.count}</div><div class="lbl">${b.label}</div></div>
+      `).join('');
+    } else {
+      badgeGrid.innerHTML = '<div class="empty-note" style="grid-column:1/-1;">ما فيه أوسمة مسجّلة بعد</div>';
+    }
+
+    document.getElementById('presentCount').textContent = data.attendance.present;
+    document.getElementById('lateCount').textContent = data.attendance.late;
+    document.getElementById('absentCount').textContent = data.attendance.absent;
+
+    if(data.attendance.attendanceRate !== null){
+      setRing('attRing', data.attendance.attendanceRate);
+      document.getElementById('attPct').textContent = data.attendance.attendanceRate + '%';
+      document.getElementById('attLabel').textContent = `من أصل ${data.attendance.totalDays} يوم مسجّل`;
+    } else {
+      setRing('attRing', 0);
+    }
+
+    if(data.positiveRate !== null){
+      setRing('posRing', data.positiveRate);
+      document.getElementById('posPct').textContent = data.positiveRate + '%';
+      document.getElementById('posLabel').textContent = 'من إجمالي التقييمات';
+    } else {
+      setRing('posRing', 0);
+    }
+
+    const list = document.getElementById('activitiesList');
+    if(data.activities.length === 0){
+      list.innerHTML = '<div class="empty-note">ما فيه نشاطات مسجّلة بعد</div>';
+    } else {
+      list.innerHTML = data.activities.map(a => `
+        <div class="activity-item">
+          <div class="activity-dot ${a.points >= 0 ? 'pos' : 'neg'}">${a.points >= 0 ? '+' : ''}${a.points}</div>
+          <div class="activity-label">${a.label}</div>
+          <div class="activity-time">${timeAgo(a.created_at)}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  let saveTimeout = null;
+  function scheduleSaveNotes(){
+    document.getElementById('saveHint').textContent = 'جارٍ الحفظ...';
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveNotes, 800);
+  }
+  async function saveNotes(){
+    const notes = document.getElementById('notesArea').value;
+    const data = await api('/api/students/' + studentId + '/notes', { method:'PUT', body: JSON.stringify({ notes }) });
+    document.getElementById('saveHint').textContent = (data && data.success) ? 'تم الحفظ ✓' : 'تعذر الحفظ';
+    setTimeout(() => { document.getElementById('saveHint').textContent = ''; }, 1500);
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

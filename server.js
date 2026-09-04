@@ -109,6 +109,7 @@ async function initDB() {
       );
     `);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS score INTEGER DEFAULT 0;`);
+    await pool.query(`ALTER TABLE students ALTER COLUMN score TYPE NUMERIC(6,1);`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS stars INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS corrects INTEGER DEFAULT 0;`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS wrongs INTEGER DEFAULT 0;`);
@@ -124,6 +125,18 @@ async function initDB() {
       console.log('تم إضافة عمود class_id الناقص لجدول students.');
     }
 
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rating_logs (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        points INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id SERIAL PRIMARY KEY,
@@ -134,6 +147,19 @@ async function initDB() {
         UNIQUE(student_id, date)
       );
     `);
+
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS notes TEXT;`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        points INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await pool.query(`ALTER TABLE activity_log ALTER COLUMN points TYPE NUMERIC(6,1);`);
 
     console.log('تم تجهيز قاعدة البيانات بنجاح.');
   } catch (err) {
@@ -305,8 +331,26 @@ async function classBelongsToUser(classId, userId) {
   return result.rows.length > 0;
 }
 
-const POINTS = { star: 3, correct: 1, wrong: -1, homework: 2 };
-const COUNTER_COLUMN = { star: 'stars', correct: 'corrects', wrong: 'wrongs', homework: 'homeworks' };
+const BADGES = {
+  correct:               { label: 'صح',                 icon: '✅', points: 1 },
+  wrong:                 { label: 'خطأ',                icon: '❌', points: -1 },
+  mastered:              { label: 'أتقن',               icon: '🧠', points: 2 },
+  not_mastered:          { label: 'لم يتقن',            icon: '🧠', points: -2 },
+  memorized:             { label: 'حفظ',                icon: '🏆', points: 1 },
+  not_memorized:         { label: 'لم يحفظ',            icon: '❌', points: -1 },
+  polite:                { label: 'مؤدب',               icon: '❤️', points: 1 },
+  excellent:             { label: 'مميز',               icon: '⭐', points: 2 },
+  homework_done:         { label: 'حل الواجب',          icon: '📖', points: 0.5 },
+  homework_missed:       { label: 'لم يحل الواجب',      icon: '📕', points: -0.5 },
+  talking:               { label: 'التحدث أثناء الدرس', icon: '🗣️', points: -1 },
+  sleeping:              { label: 'النوم في الحصة',     icon: '😴', points: -0.5 },
+  indifferent:           { label: 'لا مبالاة',          icon: '😐', points: -1 },
+  disruptive:            { label: 'مشاغب',              icon: '😈', points: -2 },
+  phone_use:             { label: 'استخدام الهاتف',     icon: '📱', points: -0.5 },
+  forgot_book:           { label: 'نسيان الكتاب',       icon: '📕', points: -0.5 },
+  project_done:          { label: 'إنجاز مشروع',        icon: '🎯', points: 2 },
+  practical_application: { label: 'تطبيق عملي',         icon: '💡', points: 5 },
+};
 
 // ===== الفصول =====
 app.get('/api/classes', authenticateToken, async (req, res) => {
@@ -425,10 +469,14 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== التقييم (نجمة / صح / خطأ / واجب) =====
+// ===== التقييم (أوسمة سلوكية وأكاديمية) =====
+app.get('/api/badges', authenticateToken, (req, res) => {
+  res.json({ success: true, badges: BADGES });
+});
+
 app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
   const { type } = req.body;
-  if (!POINTS.hasOwnProperty(type)) {
+  if (!BADGES.hasOwnProperty(type)) {
     return res.status(400).json({ success: false, message: 'نوع تقييم غير معروف' });
   }
 
@@ -439,10 +487,14 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
     const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
     if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
 
-    const column = COUNTER_COLUMN[type];
+    const points = BADGES[type].points;
     const updated = await pool.query(
-      `UPDATE students SET score = score + $1, ${column} = ${column} + 1 WHERE id = $2 RETURNING *`,
-      [POINTS[type], req.params.id]
+      `UPDATE students SET score = score + $1 WHERE id = $2 RETURNING *`,
+      [points, req.params.id]
+    );
+    await pool.query(
+      'INSERT INTO activity_log (student_id, type, points) VALUES ($1, $2, $3)',
+      [req.params.id, type, points]
     );
     res.json({ success: true, student: updated.rows[0] });
   } catch (err) {
@@ -454,7 +506,7 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
 // ===== سحب وسام (عكس التقييم) =====
 app.post('/api/students/:id/unrate', authenticateToken, async (req, res) => {
   const { type } = req.body;
-  if (!POINTS.hasOwnProperty(type)) {
+  if (!BADGES.hasOwnProperty(type)) {
     return res.status(400).json({ success: false, message: 'نوع تقييم غير معروف' });
   }
 
@@ -465,10 +517,10 @@ app.post('/api/students/:id/unrate', authenticateToken, async (req, res) => {
     const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
     if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
 
-    const column = COUNTER_COLUMN[type];
+    const points = BADGES[type].points;
     const updated = await pool.query(
-      `UPDATE students SET score = score - $1, ${column} = GREATEST(${column} - 1, 0) WHERE id = $2 RETURNING *`,
-      [POINTS[type], req.params.id]
+      `UPDATE students SET score = score - $1 WHERE id = $2 RETURNING *`,
+      [points, req.params.id]
     );
     res.json({ success: true, student: updated.rows[0] });
   } catch (err) {
@@ -538,15 +590,104 @@ app.post('/api/classes/:id/attendance', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== استيراد من نور: تحليل الملف (بدون حفظ) =====
+// ===== ملف الطالب التفصيلي =====
+app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
+  try {
+    const studentRes = await pool.query(
+      `SELECT s.*, c.name AS class_name, c.id AS class_id
+       FROM students s JOIN classes c ON s.class_id = c.id
+       WHERE s.id = $1`,
+      [req.params.id]
+    );
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const student = studentRes.rows[0];
+    const owns = await classBelongsToUser(student.class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    const attRes = await pool.query(
+      `SELECT status, COUNT(*)::int AS count FROM attendance WHERE student_id = $1 GROUP BY status`,
+      [req.params.id]
+    );
+    const attendance = { present: 0, late: 0, absent: 0 };
+    attRes.rows.forEach(r => { attendance[r.status] = r.count; });
+    const totalDays = attendance.present + attendance.late + attendance.absent;
+    const attendanceRate = totalDays > 0 ? Math.round((attendance.present / totalDays) * 100) : null;
+
+    const badgeCountsRes = await pool.query(
+      `SELECT type, COUNT(*)::int AS count FROM activity_log WHERE student_id = $1 GROUP BY type`,
+      [req.params.id]
+    );
+    let totalRatings = 0, positiveRatings = 0;
+    const badgeCounts = badgeCountsRes.rows.map(r => {
+      totalRatings += r.count;
+      const meta = BADGES[r.type];
+      if (meta && meta.points > 0) positiveRatings += r.count;
+      return { type: r.type, label: meta ? meta.label : r.type, icon: meta ? meta.icon : '🏅', count: r.count };
+    }).sort((a, b) => b.count - a.count);
+    const positiveRate = totalRatings > 0 ? Math.round((positiveRatings / totalRatings) * 100) : null;
+
+    const activityRes = await pool.query(
+      `SELECT type, points, created_at FROM activity_log WHERE student_id = $1 ORDER BY created_at DESC LIMIT 12`,
+      [req.params.id]
+    );
+    const activities = activityRes.rows.map(a => ({
+      label: BADGES[a.type] ? `${BADGES[a.type].label} ${BADGES[a.type].icon}` : a.type,
+      points: a.points,
+      created_at: a.created_at
+    }));
+
+    res.json({
+      success: true,
+      student: {
+        id: student.id, name: student.name, score: student.score, notes: student.notes,
+        className: student.class_name, classId: student.class_id
+      },
+      attendance: { ...attendance, totalDays, attendanceRate },
+      positiveRate,
+      badgeCounts,
+      activities
+    });
+  } catch (err) {
+    console.error('خطأ بجلب ملف الطالب:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+app.put('/api/students/:id/notes', authenticateToken, async (req, res) => {
+  const { notes } = req.body;
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    await pool.query('UPDATE students SET notes = $1 WHERE id = $2', [notes || '', req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+
 function looksLikeArabicName(val) {
   if (typeof val !== 'string') return false;
   const trimmed = val.trim();
   if (trimmed.length < 4 || trimmed.length > 40) return false;
   const words = trimmed.split(/\s+/);
   if (words.length < 2 || words.length > 5) return false;
+  if (/\d/.test(trimmed) || trimmed.includes(':')) return false;
   const arabicRatio = (trimmed.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length / trimmed.length;
   return arabicRatio > 0.75;
+}
+
+function looksLikeClassHeading(val) {
+  const t = val.trim();
+  if (t.length < 3 || t.length > 80) return false;
+  const arabicRatio = (t.match(/[\u0600-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/g) || []).length / t.length;
+  if (arabicRatio < 0.3) return false;
+  return /\d/.test(t) || t.includes(':');
 }
 
 function parseExcelBuffer(buffer) {
@@ -589,8 +730,21 @@ function parseExcelBuffer(buffer) {
 function parsePdfText(text) {
   // نفصل على الأسطر والتاب معًا لأن استخراج نص PDF أحيانًا يلزق أعمدة الجدول ببعض بفواصل تاب
   const tokens = text.split(/[\r\n\t]+/).map(l => l.trim()).filter(Boolean);
-  const names = [...new Set(tokens.filter(looksLikeArabicName))];
-  return [{ suggestedClassName: 'من ملف PDF (راجع القائمة)', students: names }];
+  const groups = [];
+  let current = null;
+
+  tokens.forEach(tok => {
+    if (looksLikeClassHeading(tok)) {
+      current = { suggestedClassName: tok, students: [] };
+      groups.push(current);
+    } else if (looksLikeArabicName(tok)) {
+      if (!current) { current = { suggestedClassName: 'من ملف PDF (راجع القائمة)', students: [] }; groups.push(current); }
+      current.students.push(tok);
+    }
+  });
+
+  groups.forEach(g => { g.students = [...new Set(g.students)]; });
+  return groups.filter(g => g.students.length > 0);
 }
 
 app.post('/api/import/parse', authenticateToken, upload.single('file'), async (req, res) => {
