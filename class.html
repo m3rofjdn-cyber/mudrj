@@ -66,9 +66,9 @@
   }
   .sb-rate-btn:hover{ background:#fff; border-color:var(--ink-soft); }
   .sb-rate-btn:active{ transform:scale(0.97); }
-  .sb-del{ position:absolute; top:12px; left:12px; background:none; border:none; color:var(--text-mute); font-size:13px; cursor:pointer; opacity:0; }
-  .student-box:hover .sb-del{ opacity:1; }
-  .sb-del:hover{ color:var(--danger); }
+  .sb-menu-btn{ position:absolute; top:10px; left:10px; background:none; border:none; color:var(--text-mute); font-size:18px; cursor:pointer; opacity:0; padding:4px 8px; border-radius:6px; line-height:1; }
+  .student-box:hover .sb-menu-btn{ opacity:1; }
+  .sb-menu-btn:hover{ background:var(--paper); color:var(--ink); }
 
   .add-student-row{ display:flex; gap:10px; margin-top:20px; max-width:360px; }
   .add-student-row input{
@@ -179,6 +179,26 @@
     z-index:70; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
   }
   .badge-toast.show{ opacity:1; transform:translateX(50%) translateY(0); }
+
+  /* ===== قائمة خيارات الطالب (٣ نقاط) ===== */
+  .menu-modal{ max-width:420px; padding:0; overflow:hidden; }
+  .menu-modal .badge-modal-head{ padding:20px 22px 12px; margin-bottom:0; }
+  .menu-section-title{ padding:14px 22px 8px; font-size:11.5px; font-weight:700; color:#6B8F79; background:#F7FBF8; }
+  .menu-item{
+    display:flex; align-items:center; gap:14px; padding:13px 22px; cursor:pointer;
+    transition:background .15s ease; border-bottom:1px solid #F0F3F1;
+  }
+  .menu-item:hover{ background:#F7FBF8; }
+  .menu-item.disabled{ cursor:default; opacity:0.5; }
+  .menu-item.disabled:hover{ background:none; }
+  .menu-item.danger:hover{ background:#FDF0EE; }
+  .menu-icon{
+    width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-size:17px; flex-shrink:0; color:#fff;
+  }
+  .menu-label{ flex:1; font-size:13.5px; font-weight:600; color:#20362A; }
+  .menu-item.danger .menu-label{ color:var(--danger); }
+  .menu-soon-tag{ font-size:10.5px; color:#9AA8A0; font-weight:600; }
 
   /* ===== مركز الألعاب ===== */
   .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:18px; }
@@ -432,6 +452,17 @@
 </div>
 <div class="badge-toast" id="badgeToast"></div>
 
+<!-- قائمة خيارات الطالب -->
+<div class="badge-overlay" id="menuOverlay" onclick="if(event.target===this) closeStudentMenu()">
+  <div class="badge-modal menu-modal">
+    <div class="badge-modal-head">
+      <div class="badge-modal-title" id="menuModalTitle">خيارات الطالب</div>
+      <button class="badge-modal-close" onclick="closeStudentMenu()">✕</button>
+    </div>
+    <div id="menuItemsContainer"></div>
+  </div>
+</div>
+
 <script>
   const token = localStorage.getItem('mudraj_token');
   if(!token){ window.location.href = '/'; }
@@ -487,7 +518,7 @@
     }
     grid.innerHTML = currentStudents.map(s => `
       <div class="student-box" id="student-${s.id}">
-        <button class="sb-del" onclick="deleteStudent(${s.id})">حذف</button>
+        <button class="sb-menu-btn" onclick="openStudentMenu(${s.id})">⋮</button>
         <div class="sb-top">
           <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.name}</div>
           <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
@@ -931,6 +962,104 @@
 
     const badge = BADGES_CACHE[type];
     showBadgeToast(`${badge.icon} ${badge.label} — النقاط الآن: ${data.student.score}`);
+  }
+
+  // ===== قائمة خيارات الطالب (٣ نقاط) =====
+  let menuStudentId = null;
+
+  const STUDENT_MENU = [
+    { section: 'المكافآت والتعزيز', items: [
+      { key:'grant_badge', label:'منح وسام', icon:'🏅', color:'#C9922B', action:()=>{ closeStudentMenu(); openBadgePanel(menuStudentId); } },
+      { key:'stickers', label:'الملصقات التحفيزية', icon:'😊', color:'#C9922B', soon:true },
+      { key:'assign_leader', label:'تعيين قائد الفصل', icon:'📋', color:'#2A5DB0', soon:true },
+      { key:'thanks_cert', label:'إصدار شهادة شكر', icon:'📜', color:'#C9922B', soon:true },
+      { key:'success_cert', label:'إصدار تهنئة نجاح', icon:'🎓', color:'#C9922B', soon:true },
+    ]},
+    { section: 'شؤون الطالب', items: [
+      { key:'notes', label:'إضافة ملاحظات للطالب', icon:'📝', color:'#2AA198', action:()=>{ location.href='/student.html?id='+menuStudentId; } },
+      { key:'learning_plan', label:'الخطط التعليمية', icon:'💜', color:'#8E6FC9', soon:true },
+      { key:'excuse_counter', label:'عداد الاستئذان', icon:'⏳', color:'#2A5DB0', soon:true },
+      { key:'weakness_notice', label:'إشعار ضعف', icon:'⚠️', color:'#B3432B', soon:true },
+    ]},
+    { section: 'التقويم والدعم', items: [
+      { key:'share', label:'مشاركة ملف الطالب', icon:'🔗', color:'#2A5DB0', action:()=>shareStudentProfile() },
+      { key:'print', label:'طباعة كشف الطالب', icon:'🖨️', color:'#2A5DB0', action:()=>printStudentSheet() },
+      { key:'whatsapp', label:'محادثة ولي الأمر', icon:'💬', color:'#2FA55A', soon:true },
+      { key:'refer_admin', label:'إحالة الطالب إلى الإدارة', icon:'📄', color:'#6B8F79', soon:true },
+      { key:'move_class', label:'نقل إلى فصل آخر', icon:'↗️', color:'#2A5DB0', action:()=>openMoveClass() },
+    ]},
+    { section: null, items: [
+      { key:'delete', label:'حذف الطالب', icon:'🗑️', color:'#B3432B', danger:true, action:()=>{ closeStudentMenu(); deleteStudent(menuStudentId); } },
+    ]},
+  ];
+
+  function openStudentMenu(studentId){
+    menuStudentId = studentId;
+    const student = currentStudents.find(s => s.id === studentId);
+    document.getElementById('menuModalTitle').textContent = student ? student.name : 'خيارات الطالب';
+
+    const container = document.getElementById('menuItemsContainer');
+    container.innerHTML = STUDENT_MENU.map(group => `
+      ${group.section ? `<div class="menu-section-title">${group.section}</div>` : ''}
+      ${group.items.map(item => `
+        <div class="menu-item ${item.danger ? 'danger' : ''} ${item.soon ? 'disabled' : ''}" ${item.soon ? '' : `onclick="runStudentMenuAction('${item.key}')"`}>
+          <div class="menu-icon" style="background:${item.color};">${item.icon}</div>
+          <div class="menu-label">${item.label}</div>
+          ${item.soon ? '<span class="menu-soon-tag">قريبًا</span>' : ''}
+        </div>
+      `).join('')}
+    `).join('');
+
+    document.getElementById('menuOverlay').classList.add('show');
+  }
+
+  function closeStudentMenu(){
+    document.getElementById('menuOverlay').classList.remove('show');
+  }
+
+  function runStudentMenuAction(key){
+    for(const group of STUDENT_MENU){
+      const item = group.items.find(i => i.key === key);
+      if(item && item.action){ item.action(); return; }
+    }
+  }
+
+  function shareStudentProfile(){
+    closeStudentMenu();
+    const url = window.location.origin + '/student.html?id=' + menuStudentId;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(() => showBadgeToast('🔗 تم نسخ رابط ملف الطالب'));
+    } else {
+      prompt('انسخ الرابط:', url);
+    }
+  }
+
+  function printStudentSheet(){
+    closeStudentMenu();
+    window.open('/student.html?id=' + menuStudentId + '&print=1', '_blank');
+  }
+
+  async function openMoveClass(){
+    closeStudentMenu();
+    const data = await api('/api/classes');
+    if(!data || !data.success) return;
+    const others = data.classes.filter(c => c.id !== Number(classId));
+    if(others.length === 0){ alert('ما عندك فصول ثانية تنقل لها الطالب'); return; }
+
+    const options = others.map((c,i) => `${i+1}. ${c.name}`).join('\n');
+    const choice = prompt('اختر رقم الفصل الجديد:\n' + options);
+    const idx = Number(choice) - 1;
+    if(isNaN(idx) || !others[idx]) return;
+
+    const target = others[idx];
+    const result = await api('/api/students/' + menuStudentId + '/move', { method:'PUT', body: JSON.stringify({ classId: target.id }) });
+    if(result && result.success){
+      currentStudents = currentStudents.filter(s => s.id !== menuStudentId);
+      renderStudents();
+      showBadgeToast('↗️ تم نقل الطالب إلى ' + target.name);
+    } else {
+      alert((result && result.message) || 'تعذر نقل الطالب');
+    }
   }
 
   loadClass();

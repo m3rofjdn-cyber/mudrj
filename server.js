@@ -654,6 +654,26 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/students/:id/move', authenticateToken, async (req, res) => {
+  const { classId } = req.body;
+  if (!classId) return res.status(400).json({ success: false, message: 'الفصل الجديد مطلوب' });
+
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const ownsCurrent = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    const ownsTarget = await classBelongsToUser(classId, req.user.userId);
+    if (!ownsCurrent || !ownsTarget) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    await pool.query('UPDATE students SET class_id = $1 WHERE id = $2', [classId, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('خطأ بنقل الطالب:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
 app.put('/api/students/:id/notes', authenticateToken, async (req, res) => {
   const { notes } = req.body;
   try {

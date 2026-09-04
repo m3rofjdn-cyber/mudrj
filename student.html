@@ -94,6 +94,12 @@
   .loading{ text-align:center; padding:60px; color:var(--text-mute); }
   .spinner-big{ width:32px; height:32px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--ink); animation:spin .8s linear infinite; margin:0 auto 14px; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  @media print{
+    header, .save-hint, .notes-area{ display:none !important; }
+    body{ background:#fff; }
+    .card, .profile-top{ border:1px solid #ccc; box-shadow:none; break-inside:avoid; }
+  }
 </style>
 </head>
 <body>
@@ -264,6 +270,10 @@
           <div class="activity-time">${timeAgo(a.created_at)}</div>
         </div>
       `).join('');
+    }
+
+    if(params.get('print') === '1'){
+      setTimeout(() => window.print(), 400);
     }
   }
 
