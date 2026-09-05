@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — الإعدادات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F;
+  }
+  [data-theme="dark"]{
+    --paper:#11151D; --card:#1B212C; --text:#ECEEF0; --text-mute:#909BA8;
+    --line:#2B3242; --danger-bg:#3A2422; --ink-soft:#324268;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; padding-bottom:90px; transition:background .2s ease, color .2s ease; }
+
+  header{ background:var(--ink); color:#fff; padding:16px 32px; display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .head-title{ font-weight:600; font-size:16px; }
+
+  main{ max-width:640px; margin:0 auto; padding:24px 20px; }
+
+  .profile-card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px;
+    display:flex; align-items:center; gap:16px; margin-bottom:18px;
+  }
+  .profile-avatar{ width:54px; height:54px; border-radius:50%; background:var(--ink); color:#fff; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:600; flex-shrink:0; }
+  .profile-name{ font-size:16px; font-weight:600; }
+  .profile-status{ font-size:12px; color:var(--ok); font-weight:500; margin-top:2px; }
+
+  .settings-group{ background:var(--card); border:1px solid var(--line); border-radius:14px; margin-bottom:16px; overflow:hidden; }
+  .settings-row{
+    display:flex; align-items:center; gap:14px; padding:15px 18px; border-bottom:1px solid var(--line);
+    cursor:pointer; transition:background .15s ease;
+  }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row:hover{ background:var(--paper); }
+  .settings-row.disabled{ cursor:default; opacity:0.55; }
+  .settings-row.disabled:hover{ background:none; }
+  .row-icon{ font-size:17px; width:26px; text-align:center; flex-shrink:0; }
+  .row-label{ flex:1; font-size:13.5px; font-weight:500; }
+  .row-value{ font-size:12px; color:var(--text-mute); font-weight:300; }
+  .row-arrow{ color:var(--text-mute); font-size:14px; }
+  .row-soon{ font-size:10.5px; color:#9AA1AC; font-weight:600; background:var(--paper); padding:3px 8px; border-radius:10px; }
+
+  /* Toggle switch */
+  .switch{ position:relative; width:42px; height:24px; flex-shrink:0; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .switch-slider{ position:absolute; inset:0; background:#D7D2C3; border-radius:24px; cursor:pointer; transition:background .2s; }
+  .switch-slider::before{ content:''; position:absolute; width:18px; height:18px; right:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+  .switch input:checked + .switch-slider{ background:var(--ink); }
+  .switch input:checked + .switch-slider::before{ transform:translateX(-18px); }
+
+  .group-title{ font-size:11.5px; font-weight:700; color:var(--text-mute); margin:20px 4px 8px; }
+  .group-title:first-child{ margin-top:0; }
+
+  .danger-row .row-label{ color:var(--danger); }
+
+  /* ===== شريط سفلي ===== */
+  .bottom-nav{
+    position:fixed; bottom:16px; right:50%; transform:translateX(50%); z-index:30;
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px;
+    display:flex; gap:4px; box-shadow:0 10px 30px -10px rgba(22,33,62,0.25);
+  }
+  .nav-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 16px; border-radius:14px;
+    cursor:pointer; font-size:10.5px; font-weight:600; color:var(--text-mute); background:none; border:none; font-family:inherit;
+  }
+  .nav-item.active{ background:var(--ink); color:#fff; }
+  .nav-item.disabled{ opacity:0.4; cursor:default; }
+  .nav-icon{ font-size:18px; }
+
+  /* ===== نافذة تعديل التقييمات ===== */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(22,33,62,0.45); z-index:60; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{ background:#fff; border-radius:18px; padding:24px; width:100%; max-width:480px; max-height:80vh; overflow-y:auto; }
+  .modal-box h3{ font-size:16px; margin-bottom:16px; }
+  .edit-badge-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .edit-badge-row .lbl{ flex:1; font-size:13px; }
+  .edit-badge-row input{ width:70px; padding:6px 8px; border:1px solid var(--line); border-radius:7px; font-family:inherit; text-align:center; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .modal-actions button{ flex:1; padding:11px; border:none; border-radius:9px; font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer; }
+  .btn-save{ background:var(--ink); color:#fff; }
+  .btn-cancel{ background:var(--paper); color:var(--text-mute); }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="location.href='/dashboard.html'">→</button>
+  <div class="head-title">الإعدادات</div>
+</header>
+
+<main>
+  <div class="profile-card">
+    <div class="profile-avatar" id="avatarInitial">م</div>
+    <div>
+      <div class="profile-name" id="userName">...</div>
+      <div class="profile-status">✓ حساب مجاني بالكامل حاليًا</div>
+    </div>
+  </div>
+
+  <div class="group-title">عام</div>
+  <div class="settings-group">
+    <div class="settings-row disabled">
+      <span class="row-icon">🌐</span><span class="row-label">اللغة</span><span class="row-value">العربية فقط حاليًا</span>
+    </div>
+    <div class="settings-row disabled">
+      <span class="row-icon">👑</span><span class="row-label">باقات الاشتراك</span><span class="row-soon">التطبيق مجاني</span>
+    </div>
+    <div class="settings-row" onclick="toggleDarkMode()">
+      <span class="row-icon">🌓</span><span class="row-label">مظهر التطبيق (داكن)</span>
+      <label class="switch"><input type="checkbox" id="darkToggle" onclick="toggleDarkMode(); event.stopPropagation();"><span class="switch-slider"></span></label>
+    </div>
+    <div class="settings-row disabled">
+      <span class="row-icon">📅</span><span class="row-label">التاريخ الهجري</span><span class="row-soon">قريبًا</span>
+    </div>
+    <div class="settings-row">
+      <span class="row-icon">✨</span><span class="row-label">تفعيل المؤثرات الحركية</span>
+      <label class="switch"><input type="checkbox" id="animToggle" checked onchange="toggleAnimations()"><span class="switch-slider"></span></label>
+    </div>
+  </div>
+
+  <div class="group-title">إدارة الفصول والتقييم</div>
+  <div class="settings-group">
+    <div class="settings-row" onclick="openBadgeEditor()">
+      <span class="row-icon">🎚️</span><span class="row-label">تعديل التقييمات (نقاط الأوسمة)</span><span class="row-arrow">‹</span>
+    </div>
+    <div class="settings-row disabled">
+      <span class="row-icon">📋</span><span class="row-label">تعديل أعمال السنة</span><span class="row-soon">قريبًا</span>
+    </div>
+    <div class="settings-row disabled">
+      <span class="row-icon">🧑‍🤝‍🧑</span><span class="row-label">أنماط صور الطلاب</span><span class="row-soon">قريبًا</span>
+    </div>
+    <div class="settings-row" onclick="location.href='/archived.html'">
+      <span class="row-icon">🗄️</span><span class="row-label">الفصول المؤرشفة</span><span class="row-arrow">‹</span>
+    </div>
+    <div class="settings-row" onclick="inviteFriend()">
+      <span class="row-icon">🤝</span><span class="row-label">أخبر صديقًا</span><span class="row-arrow">‹</span>
+    </div>
+  </div>
+
+  <div class="group-title">الدعم والمعلومات</div>
+  <div class="settings-group">
+    <div class="settings-row" onclick="exportData()">
+      <span class="row-icon">☁️</span><span class="row-label">النسخ الاحتياطي (تصدير بياناتي)</span><span class="row-arrow">‹</span>
+    </div>
+    <div class="settings-row" onclick="showInfoModal('تعليمات الاستخدام', helpText)">
+      <span class="row-icon">💡</span><span class="row-label">تعليمات</span><span class="row-arrow">‹</span>
+    </div>
+    <div class="settings-row disabled">
+      <span class="row-icon">💬</span><span class="row-label">تواصل معنا</span><span class="row-soon">قريبًا</span>
+    </div>
+    <div class="settings-row" onclick="showInfoModal('سياسة الخصوصية', privacyText)">
+      <span class="row-icon">🛡️</span><span class="row-label">سياسة الخصوصية</span><span class="row-arrow">‹</span>
+    </div>
+    <div class="settings-row" onclick="showInfoModal('الشروط والأحكام', termsText)">
+      <span class="row-icon">ℹ️</span><span class="row-label">الشروط والأحكام</span><span class="row-arrow">‹</span>
+    </div>
+  </div>
+
+  <div class="group-title">الحساب</div>
+  <div class="settings-group">
+    <div class="settings-row danger-row" onclick="deleteAllData()">
+      <span class="row-icon">🗑️</span><span class="row-label">حذف البيانات (كل الفصول والطلاب)</span>
+    </div>
+    <div class="settings-row danger-row" onclick="logout()">
+      <span class="row-icon">⏻</span><span class="row-label">تسجيل الخروج</span>
+    </div>
+  </div>
+</main>
+
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="location.href='/dashboard.html'"><span class="nav-icon">🏠</span>الفصول</button>
+  <button class="nav-item disabled"><span class="nav-icon">📖</span>ملف الإنجاز</button>
+  <button class="nav-item disabled"><span class="nav-icon">🧑‍🏫</span>مساحة المعلم</button>
+  <button class="nav-item active" style="background:var(--ink); color:#fff;" onclick="location.href='/settings.html'"><span class="nav-icon">⚙️</span>الإعدادات</button>
+</div>
+
+<!-- نافذة تعديل التقييمات -->
+<div class="modal-overlay" id="badgeEditorOverlay">
+  <div class="modal-box">
+    <h3>تعديل نقاط الأوسمة</h3>
+    <div id="badgeEditorList"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeBadgeEditor()">إلغاء</button>
+      <button class="btn-save" onclick="saveBadgeEdits()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة معلومات عامة -->
+<div class="modal-overlay" id="infoModalOverlay">
+  <div class="modal-box">
+    <h3 id="infoModalTitle"></h3>
+    <div id="infoModalBody" style="font-size:13px; color:var(--text-mute); line-height:2; white-space:pre-line;"></div>
+    <div class="modal-actions"><button class="btn-save" onclick="closeInfoModal()" style="width:100%;">تمام</button></div>
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  async function api(path, options={}){
+    const res = await fetch(path, {
+      ...options,
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...(options.headers||{}) }
+    });
+    if(res.status === 401 || res.status === 403){ logout(); return; }
+    return res.json();
+  }
+
+  try{
+    const user = JSON.parse(localStorage.getItem('mudraj_user'));
+    document.getElementById('userName').textContent = user.firstName || user.username;
+    document.getElementById('avatarInitial').textContent = (user.firstName || user.username || 'م').charAt(0);
+  }catch(e){}
+
+  function logout(){
+    localStorage.removeItem('mudraj_token');
+    localStorage.removeItem('mudraj_user');
+    window.location.href = '/';
+  }
+
+  // ===== المظهر الداكن (تجريبي بهذي الصفحة الآن، يشمل كل التطبيق بالمرحلة القادمة) =====
+  function applyDarkMode(on){
+    document.documentElement.dataset.theme = on ? 'dark' : '';
+  }
+  const savedDark = localStorage.getItem('mudraj_dark') === '1';
+  document.getElementById('darkToggle').checked = savedDark;
+  applyDarkMode(savedDark);
+  function toggleDarkMode(){
+    const on = document.getElementById('darkToggle').checked;
+    localStorage.setItem('mudraj_dark', on ? '1' : '0');
+    applyDarkMode(on);
+  }
+
+  // ===== المؤثرات الحركية =====
+  const savedAnim = localStorage.getItem('mudraj_anim');
+  document.getElementById('animToggle').checked = savedAnim !== '0';
+  function toggleAnimations(){
+    const on = document.getElementById('animToggle').checked;
+    localStorage.setItem('mudraj_anim', on ? '1' : '0');
+  }
+
+  // ===== تعديل التقييمات =====
+  let badgesCache = null;
+  async function openBadgeEditor(){
+    const data = await api('/api/badges');
+    if(!data || !data.success) return;
+    badgesCache = data.badges;
+    const list = document.getElementById('badgeEditorList');
+    list.innerHTML = Object.entries(badgesCache).map(([key, b]) => `
+      <div class="edit-badge-row">
+        <span class="lbl">${b.icon} ${b.label}</span>
+        <input type="number" step="0.5" value="${b.points}" data-key="${key}">
+      </div>
+    `).join('');
+    document.getElementById('badgeEditorOverlay').classList.add('show');
+  }
+  function closeBadgeEditor(){ document.getElementById('badgeEditorOverlay').classList.remove('show'); }
+
+  async function saveBadgeEdits(){
+    const overrides = {};
+    document.querySelectorAll('#badgeEditorList input').forEach(inp => {
+      overrides[inp.dataset.key] = parseFloat(inp.value);
+    });
+    const data = await api('/api/badges', { method:'PUT', body: JSON.stringify({ overrides }) });
+    if(data && data.success){ closeBadgeEditor(); alert('تم حفظ التعديلات'); }
+    else alert('تعذر الحفظ');
+  }
+
+  // ===== أخبر صديقًا =====
+  function inviteFriend(){
+    const url = window.location.origin;
+    const text = `جرّب "مُدرَج" لإدارة فصولك وطلابك بسهولة: ${url}`;
+    if(navigator.share){ navigator.share({ text }); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(text); alert('تم نسخ رابط الدعوة'); }
+    else { prompt('انسخ الرابط:', text); }
+  }
+
+  // ===== تصدير البيانات =====
+  async function exportData(){
+    try{
+      const res = await fetch('/api/export', { headers:{ 'Authorization':'Bearer ' + token } });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'mudraj-backup.json'; a.click();
+      URL.revokeObjectURL(url);
+    }catch(e){ alert('تعذر تحميل النسخة الاحتياطية'); }
+  }
+
+  // ===== حذف كل البيانات =====
+  async function deleteAllData(){
+    if(!confirm('متأكد؟ راح تنحذف كل فصولك وطلابك نهائيًا ولا يمكن التراجع.')) return;
+    if(!confirm('تأكيد أخير: هذا الإجراء نهائي. متابعة؟')) return;
+    const data = await api('/api/account/data', { method:'DELETE' });
+    if(data && data.success){ alert('تم حذف كل البيانات'); location.href = '/dashboard.html'; }
+    else alert('تعذر الحذف');
+  }
+
+  // ===== نصوص المعلومات =====
+  const helpText = `مرحبًا بك في مُدرَج!
+
+١. من "فصولي" اضغط "+ فصل جديد" لإنشاء فصل جديد بتحديد المرحلة والصف والشعبة.
+٢. ادخل الفصل وأضف طلابك بالاسم.
+٣. اضغط "قيّم الطالب" لإعطاء أوسمة (صح، خطأ، مميز...) تزيد أو تنقص نقاطه.
+٤. من تبويب "ألعاب" جرّب الأربعة ترجح والقطار السريع وعجلة الأسماء.
+٥. من قائمة الـ٣ نقاط على أي طالب تقدر تنقله، تشارك ملفه، أو تطبعه.`;
+
+  const privacyText = `مُدرَج تطبيق لإدارة الفصول الدراسية بُني من قبل معلم لخدمة المعلمين.
+
+بياناتك (الفصول، الطلاب، الدرجات) تُخزَّن بقاعدة بيانات خاصة بحسابك فقط، ولا نشاركها مع أي طرف ثالث.
+
+بما إن التطبيق لسا بمرحلة تطوير، ننصح دائمًا بأخذ نسخة احتياطية دورية من "النسخ الاحتياطي" أعلاه.`;
+
+  const termsText = `باستخدامك لتطبيق مُدرَج، أنت توافق على:
+
+١. استخدام التطبيق لأغراض تعليمية مشروعة فقط.
+٢. تحمّل مسؤولية دقة البيانات اللي تدخلها.
+٣. التطبيق مقدَّم "كما هو" بدون ضمانات، وقيد التطوير المستمر.`;
+
+  function showInfoModal(title, body){
+    document.getElementById('infoModalTitle').textContent = title;
+    document.getElementById('infoModalBody').textContent = body;
+    document.getElementById('infoModalOverlay').classList.add('show');
+  }
+  function closeInfoModal(){ document.getElementById('infoModalOverlay').classList.remove('show'); }
+</script>
+</body>
+</html>

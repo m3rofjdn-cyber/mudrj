@@ -520,7 +520,7 @@
       <div class="student-box" id="student-${s.id}">
         <button class="sb-menu-btn" onclick="openStudentMenu(${s.id})">⋮</button>
         <div class="sb-top">
-          <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.name}</div>
+          <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.is_leader ? '👑 ' : ''}${s.name}</div>
           <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
         </div>
         <button class="sb-rate-btn" onclick="openBadgePanel(${s.id})">🏅 قيّم الطالب</button>
@@ -970,22 +970,22 @@
   const STUDENT_MENU = [
     { section: 'المكافآت والتعزيز', items: [
       { key:'grant_badge', label:'منح وسام', icon:'🏅', color:'#C9922B', action:()=>{ closeStudentMenu(); openBadgePanel(menuStudentId); } },
-      { key:'stickers', label:'الملصقات التحفيزية', icon:'😊', color:'#C9922B', soon:true },
-      { key:'assign_leader', label:'تعيين قائد الفصل', icon:'📋', color:'#2A5DB0', soon:true },
-      { key:'thanks_cert', label:'إصدار شهادة شكر', icon:'📜', color:'#C9922B', soon:true },
-      { key:'success_cert', label:'إصدار تهنئة نجاح', icon:'🎓', color:'#C9922B', soon:true },
+      { key:'stickers', label:'الملصقات التحفيزية', icon:'😊', color:'#C9922B', action:()=>openStickerPicker() },
+      { key:'assign_leader', label:'تعيين قائد الفصل', icon:'📋', color:'#2A5DB0', action:()=>toggleLeader() },
+      { key:'thanks_cert', label:'إصدار شهادة شكر', icon:'📜', color:'#C9922B', action:()=>{ closeStudentMenu(); window.open('/certificate.html?id='+menuStudentId+'&type=thanks','_blank'); } },
+      { key:'success_cert', label:'إصدار تهنئة نجاح', icon:'🎓', color:'#C9922B', action:()=>{ closeStudentMenu(); window.open('/certificate.html?id='+menuStudentId+'&type=success','_blank'); } },
     ]},
     { section: 'شؤون الطالب', items: [
       { key:'notes', label:'إضافة ملاحظات للطالب', icon:'📝', color:'#2AA198', action:()=>{ location.href='/student.html?id='+menuStudentId; } },
-      { key:'learning_plan', label:'الخطط التعليمية', icon:'💜', color:'#8E6FC9', soon:true },
-      { key:'excuse_counter', label:'عداد الاستئذان', icon:'⏳', color:'#2A5DB0', soon:true },
-      { key:'weakness_notice', label:'إشعار ضعف', icon:'⚠️', color:'#B3432B', soon:true },
+      { key:'learning_plan', label:'الخطط التعليمية', icon:'💜', color:'#8E6FC9', action:()=>editLearningPlan() },
+      { key:'excuse_counter', label:'عداد الاستئذان', icon:'⏳', color:'#2A5DB0', action:()=>incrementExcuse() },
+      { key:'weakness_notice', label:'إشعار ضعف', icon:'⚠️', color:'#B3432B', action:()=>sendNotice('weakness','إشعار ضعف') },
     ]},
     { section: 'التقويم والدعم', items: [
       { key:'share', label:'مشاركة ملف الطالب', icon:'🔗', color:'#2A5DB0', action:()=>shareStudentProfile() },
       { key:'print', label:'طباعة كشف الطالب', icon:'🖨️', color:'#2A5DB0', action:()=>printStudentSheet() },
-      { key:'whatsapp', label:'محادثة ولي الأمر', icon:'💬', color:'#2FA55A', soon:true },
-      { key:'refer_admin', label:'إحالة الطالب إلى الإدارة', icon:'📄', color:'#6B8F79', soon:true },
+      { key:'whatsapp', label:'محادثة ولي الأمر', icon:'💬', color:'#2FA55A', action:()=>chatParent() },
+      { key:'refer_admin', label:'إحالة الطالب إلى الإدارة', icon:'📄', color:'#6B8F79', action:()=>sendNotice('refer_admin','إحالة إلى الإدارة') },
       { key:'move_class', label:'نقل إلى فصل آخر', icon:'↗️', color:'#2A5DB0', action:()=>openMoveClass() },
     ]},
     { section: null, items: [
@@ -1060,6 +1060,79 @@
     } else {
       alert((result && result.message) || 'تعذر نقل الطالب');
     }
+  }
+
+  // ===== الملصقات التحفيزية (احتفال بصري سريع) =====
+  const STICKERS = ['🌟','👏','🎉','💪','🏆','🔥','😍','🥳'];
+  function openStickerPicker(){
+    closeStudentMenu();
+    const pick = prompt('اختر رقم الملصق:\n' + STICKERS.map((s,i)=>`${i+1}. ${s}`).join('   '));
+    const idx = Number(pick) - 1;
+    if(isNaN(idx) || !STICKERS[idx]) return;
+    showStickerBurst(STICKERS[idx]);
+  }
+  function showStickerBurst(emoji){
+    const el = document.createElement('div');
+    el.textContent = emoji;
+    el.style.cssText = 'position:fixed; top:40%; right:50%; transform:translate(50%,-50%) scale(0); font-size:90px; z-index:80; transition:transform .4s cubic-bezier(0.34,1.56,0.64,1), opacity .4s ease; opacity:1;';
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.transform = 'translate(50%,-50%) scale(1)'; });
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(50%,-70%) scale(1.3)'; }, 900);
+    setTimeout(() => el.remove(), 1400);
+  }
+
+  // ===== تعيين قائد الفصل =====
+  async function toggleLeader(){
+    closeStudentMenu();
+    const data = await api('/api/students/' + menuStudentId + '/leader', { method:'PUT' });
+    if(data && data.success){
+      showBadgeToast(data.isLeader ? '👑 تم تعيينه قائد الفصل' : 'تم إلغاء القيادة');
+      loadClass();
+    }
+  }
+
+  // ===== الخطة التعليمية =====
+  async function editLearningPlan(){
+    closeStudentMenu();
+    const current = prompt('اكتب الخطة التعليمية لهذا الطالب:');
+    if(current === null) return;
+    const data = await api('/api/students/' + menuStudentId + '/learning-plan', { method:'PUT', body: JSON.stringify({ plan: current }) });
+    if(data && data.success) showBadgeToast('💜 تم حفظ الخطة التعليمية');
+  }
+
+  // ===== عداد الاستئذان =====
+  async function incrementExcuse(){
+    closeStudentMenu();
+    const data = await api('/api/students/' + menuStudentId + '/excuse', { method:'POST' });
+    if(data && data.success) showBadgeToast('⏳ عدد مرات الاستئذان الآن: ' + data.excuseCount);
+  }
+
+  // ===== إشعار ضعف / إحالة للإدارة =====
+  async function sendNotice(type, label){
+    closeStudentMenu();
+    const message = prompt(`اكتب تفاصيل "${label}" (اختياري):`) || '';
+    const data = await api('/api/students/' + menuStudentId + '/notice', { method:'POST', body: JSON.stringify({ type, message }) });
+    if(data && data.success) showBadgeToast('✅ تم تسجيل: ' + label);
+  }
+
+  // ===== محادثة ولي الأمر =====
+  async function chatParent(){
+    closeStudentMenu();
+    const profileData = await api('/api/students/' + menuStudentId + '/profile');
+    let phone = null;
+    try{
+      const res = await fetch('/api/students/' + menuStudentId + '/profile', { headers:{ 'Authorization':'Bearer ' + token } });
+      const d = await res.json();
+      phone = d.student && d.student.parentPhone;
+    }catch(e){}
+
+    if(!phone){
+      phone = prompt('ما فيه رقم جوال محفوظ لولي الأمر. أدخله الآن (مع رمز الدولة، مثال: 9665xxxxxxxx):');
+      if(!phone) return;
+      await api('/api/students/' + menuStudentId + '/parent-phone', { method:'PUT', body: JSON.stringify({ phone }) });
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    window.open('https://wa.me/' + cleanPhone, '_blank');
   }
 
   loadClass();

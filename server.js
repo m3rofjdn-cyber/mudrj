@@ -81,6 +81,8 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_badges JSONB;`);
+    await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS stage VARCHAR(20);`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS grade SMALLINT;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS section SMALLINT;`);
@@ -149,6 +151,20 @@ async function initDB() {
     `);
 
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS notes TEXT;`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS is_leader BOOLEAN DEFAULT false;`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS excuse_count INTEGER DEFAULT 0;`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS learning_plan TEXT;`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_phone VARCHAR(20);`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS student_notices (
+        id SERIAL PRIMARY KEY,
+        student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+        type VARCHAR(20) NOT NULL,
+        message TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS activity_log (
@@ -356,7 +372,7 @@ const BADGES = {
 app.get('/api/classes', authenticateToken, async (req, res) => {
   try {
     const classesRes = await pool.query(
-      'SELECT * FROM classes WHERE user_id = $1 ORDER BY stage, grade, section',
+      'SELECT * FROM classes WHERE user_id = $1 AND archived = false ORDER BY stage, grade, section',
       [req.user.userId]
     );
     const classes = classesRes.rows;
@@ -470,8 +486,42 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
 });
 
 // ===== التقييم (أوسمة سلوكية وأكاديمية) =====
-app.get('/api/badges', authenticateToken, (req, res) => {
-  res.json({ success: true, badges: BADGES });
+async function getMergedBadges(userId) {
+  const result = await pool.query('SELECT custom_badges FROM users WHERE id = $1', [userId]);
+  const overrides = (result.rows[0] && result.rows[0].custom_badges) || {};
+  const merged = {};
+  for (const key in BADGES) {
+    merged[key] = { ...BADGES[key], points: overrides[key] !== undefined ? overrides[key] : BADGES[key].points };
+  }
+  return merged;
+}
+
+app.get('/api/badges', authenticateToken, async (req, res) => {
+  try {
+    const badges = await getMergedBadges(req.user.userId);
+    res.json({ success: true, badges });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+app.put('/api/badges', authenticateToken, async (req, res) => {
+  const { overrides } = req.body;
+  if (!overrides || typeof overrides !== 'object') {
+    return res.status(400).json({ success: false, message: 'بيانات غير صحيحة' });
+  }
+  const clean = {};
+  for (const key in overrides) {
+    if (BADGES.hasOwnProperty(key) && typeof overrides[key] === 'number' && !isNaN(overrides[key])) {
+      clean[key] = overrides[key];
+    }
+  }
+  try {
+    await pool.query('UPDATE users SET custom_badges = $1 WHERE id = $2', [JSON.stringify(clean), req.user.userId]);
+    res.json({ success: true, badges: await getMergedBadges(req.user.userId) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
 });
 
 app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
@@ -487,7 +537,8 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
     const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
     if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
 
-    const points = BADGES[type].points;
+    const merged = await getMergedBadges(req.user.userId);
+    const points = merged[type].points;
     const updated = await pool.query(
       `UPDATE students SET score = score + $1 WHERE id = $2 RETURNING *`,
       [points, req.params.id]
@@ -641,6 +692,7 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
       success: true,
       student: {
         id: student.id, name: student.name, score: student.score, notes: student.notes,
+        parentPhone: student.parent_phone, isLeader: student.is_leader, learningPlan: student.learning_plan,
         className: student.class_name, classId: student.class_id
       },
       attendance: { ...attendance, totalDays, attendanceRate },
@@ -650,6 +702,106 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('خطأ بجلب ملف الطالب:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== تعيين قائد الفصل =====
+app.put('/api/students/:id/leader', authenticateToken, async (req, res) => {
+  try {
+    const studentRes = await pool.query('SELECT class_id, is_leader FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const { class_id, is_leader } = studentRes.rows[0];
+    const owns = await classBelongsToUser(class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    if (is_leader) {
+      await pool.query('UPDATE students SET is_leader = false WHERE id = $1', [req.params.id]);
+      return res.json({ success: true, isLeader: false });
+    }
+
+    await pool.query('UPDATE students SET is_leader = false WHERE class_id = $1', [class_id]);
+    await pool.query('UPDATE students SET is_leader = true WHERE id = $1', [req.params.id]);
+    res.json({ success: true, isLeader: true });
+  } catch (err) {
+    console.error('خطأ بتعيين القائد:', err.message);
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== عداد الاستئذان =====
+app.post('/api/students/:id/excuse', authenticateToken, async (req, res) => {
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    const updated = await pool.query(
+      'UPDATE students SET excuse_count = excuse_count + 1 WHERE id = $1 RETURNING excuse_count',
+      [req.params.id]
+    );
+    res.json({ success: true, excuseCount: updated.rows[0].excuse_count });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== الخطة التعليمية =====
+app.put('/api/students/:id/learning-plan', authenticateToken, async (req, res) => {
+  const { plan } = req.body;
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    await pool.query('UPDATE students SET learning_plan = $1 WHERE id = $2', [plan || '', req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== جوال ولي الأمر (لمحادثة واتساب) =====
+app.put('/api/students/:id/parent-phone', authenticateToken, async (req, res) => {
+  const { phone } = req.body;
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    await pool.query('UPDATE students SET parent_phone = $1 WHERE id = $2', [phone || '', req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== إشعارات (ضعف / إحالة للإدارة) =====
+app.post('/api/students/:id/notice', authenticateToken, async (req, res) => {
+  const { type, message } = req.body;
+  if (!['weakness', 'refer_admin'].includes(type)) {
+    return res.status(400).json({ success: false, message: 'نوع إشعار غير معروف' });
+  }
+  try {
+    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
+
+    const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    await pool.query(
+      'INSERT INTO student_notices (student_id, type, message) VALUES ($1, $2, $3)',
+      [req.params.id, type, message || '']
+    );
+    res.json({ success: true });
+  } catch (err) {
     res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
   }
 });
@@ -837,6 +989,59 @@ app.post('/api/import/confirm', authenticateToken, async (req, res) => {
     res.status(500).json({ success: false, message: 'تعذر حفظ البيانات' });
   } finally {
     client.release();
+  }
+});
+
+// ===== أرشفة الفصول =====
+app.put('/api/classes/:id/archive', authenticateToken, async (req, res) => {
+  try {
+    const owns = await classBelongsToUser(req.params.id, req.user.userId);
+    if (!owns) return res.status(403).json({ success: false, message: 'غير مصرح' });
+
+    const result = await pool.query('SELECT archived FROM classes WHERE id = $1', [req.params.id]);
+    const newState = !result.rows[0].archived;
+    await pool.query('UPDATE classes SET archived = $1 WHERE id = $2', [newState, req.params.id]);
+    res.json({ success: true, archived: newState });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+app.get('/api/classes/archived', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT c.*, (SELECT COUNT(*)::int FROM students WHERE class_id = c.id) AS "studentCount" FROM classes c WHERE c.user_id = $1 AND c.archived = true ORDER BY c.id DESC',
+      [req.user.userId]
+    );
+    res.json({ success: true, classes: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== تصدير كل بياناتي (نسخة احتياطية) =====
+app.get('/api/export', authenticateToken, async (req, res) => {
+  try {
+    const classesRes = await pool.query('SELECT * FROM classes WHERE user_id = $1', [req.user.userId]);
+    const classes = classesRes.rows;
+    for (const cls of classes) {
+      const studentsRes = await pool.query('SELECT * FROM students WHERE class_id = $1', [cls.id]);
+      cls.students = studentsRes.rows;
+    }
+    res.setHeader('Content-Disposition', 'attachment; filename="mudraj-backup.json"');
+    res.json({ exportedAt: new Date().toISOString(), classes });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== حذف كل بياناتي (يبقي الحساب، يمسح الفصول والطلاب) =====
+app.delete('/api/account/data', authenticateToken, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM classes WHERE user_id = $1', [req.user.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
   }
 });
 

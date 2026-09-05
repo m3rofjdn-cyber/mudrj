@@ -13,7 +13,7 @@
     --line:#E4DFD1; --danger:#B3432B; --danger-bg:#FBEAE4; --ok:#2F6E4F; --ok-bg:#E9F4EC;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; padding-bottom:90px; }
 
   header{
     background:var(--ink); color:#fff;
@@ -121,6 +121,20 @@
 
   .skeleton{ background:linear-gradient(90deg, #EFE9DA 25%, #F7F4EC 37%, #EFE9DA 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:12px; height:96px; }
   @keyframes shimmer{ 0%{background-position:100% 50%;} 100%{background-position:0 50%;} }
+
+  /* ===== شريط سفلي ===== */
+  .bottom-nav{
+    position:fixed; bottom:16px; right:50%; transform:translateX(50%); z-index:30;
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px;
+    display:flex; gap:4px; box-shadow:0 10px 30px -10px rgba(22,33,62,0.25);
+  }
+  .nav-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 16px; border-radius:14px;
+    cursor:pointer; font-size:10.5px; font-weight:600; color:var(--text-mute); background:none; border:none; font-family:inherit;
+  }
+  .nav-item.active{ background:var(--ink); color:#fff; }
+  .nav-item.disabled{ opacity:0.4; cursor:default; }
+  .nav-icon{ font-size:18px; }
 </style>
 </head>
 <body>
@@ -145,6 +159,13 @@
     </div>
   </div>
 </main>
+
+<div class="bottom-nav">
+  <button class="nav-item active" style="background:var(--ink); color:#fff;"><span class="nav-icon">🏠</span>الفصول</button>
+  <button class="nav-item disabled"><span class="nav-icon">📖</span>ملف الإنجاز</button>
+  <button class="nav-item disabled"><span class="nav-icon">🧑‍🏫</span>مساحة المعلم</button>
+  <button class="nav-item" onclick="location.href='/settings.html'"><span class="nav-icon">⚙️</span>الإعدادات</button>
+</div>
 
 <!-- نافذة إضافة فصل -->
 <div class="overlay" id="overlay">
@@ -240,7 +261,7 @@
         const avg = c.students.length ? Math.round(c.students.reduce((a,s)=>a+s.score,0) / c.students.length) : 0;
         html += `
           <div class="class-card" onclick="location.href='/class.html?id=${c.id}'">
-            <button class="class-del" onclick="event.stopPropagation(); deleteClass(${c.id})" title="حذف">✕</button>
+            <button class="class-del" onclick="event.stopPropagation(); openClassMenu(${c.id}, '${c.name.replace(/'/g,"\\'")}')" title="خيارات">⋮</button>
             <div class="cname">${c.name}</div>
             <div class="cmeta">${c.studentCount} طالب</div>
             <div class="cavg"><span class="gold-dot"></span> متوسط النقاط: ${avg}</div>
@@ -254,6 +275,17 @@
   async function deleteClass(id){
     if(!confirm('حذف الفصل وكل طلابه؟ ما ينرجع.')) return;
     await api('/api/classes/' + id, { method:'DELETE' });
+    loadClasses();
+  }
+
+  function openClassMenu(id, name){
+    const choice = prompt(`خيارات فصل "${name}":\n1. أرشفة الفصل (يختفي من القائمة، تقدر تسترجعه لاحقًا)\n2. حذف نهائي (لا يمكن التراجع)\n\nاكتب رقم الخيار:`);
+    if(choice === '1') archiveClass(id);
+    else if(choice === '2') deleteClass(id);
+  }
+
+  async function archiveClass(id){
+    await api('/api/classes/' + id + '/archive', { method:'PUT' });
     loadClasses();
   }
 
