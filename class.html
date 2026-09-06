@@ -42,6 +42,8 @@
 
   main{ max-width:1080px; margin:0 auto; padding:28px 24px 80px; }
   .view{ display:none; }
+  @keyframes tabIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
+  .view.active{ display:block; animation:tabIn .3s cubic-bezier(0.22,1,0.36,1); }
   .view.active{ display:block; }
 
   /* ===== الطلاب ===== */
@@ -49,9 +51,10 @@
   .students-toolbar .count{ color:var(--text-mute); font-size:13.5px; font-weight:300; }
   .students-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
 
+  @keyframes cardIn{ from{ opacity:0; transform:translateY(10px) scale(0.97); } to{ opacity:1; transform:translateY(0) scale(1); } }
   .student-box{
     background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
-    position:relative; transition:box-shadow .15s ease;
+    position:relative; transition:box-shadow .15s ease; animation:cardIn .35s ease backwards;
   }
   .student-box.flash{ box-shadow:0 0 0 3px var(--gold-soft); }
   .sb-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
@@ -153,7 +156,7 @@
   .badge-btn{
     display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:12px; border:none;
     cursor:pointer; font-family:inherit; text-align:right; transition:transform .12s ease, box-shadow .15s ease;
-    position:relative; overflow:hidden;
+    position:relative; overflow:hidden; animation:cardIn .3s ease backwards;
   }
   .badge-btn:active{ transform:scale(0.95); }
   .badge-btn.pos{ background:#EAF7EE; }
@@ -186,7 +189,7 @@
   .menu-section-title{ padding:14px 22px 8px; font-size:11.5px; font-weight:700; color:#6B8F79; background:#F7FBF8; }
   .menu-item{
     display:flex; align-items:center; gap:14px; padding:13px 22px; cursor:pointer;
-    transition:background .15s ease; border-bottom:1px solid #F0F3F1;
+    transition:background .15s ease; border-bottom:1px solid #F0F3F1; animation:cardIn .3s ease backwards;
   }
   .menu-item:hover{ background:#F7FBF8; }
   .menu-item.disabled{ cursor:default; opacity:0.5; }
@@ -205,6 +208,7 @@
   .game-card{
     border-radius:20px; padding:38px 18px; text-align:center; cursor:pointer;
     transition:transform .15s ease, box-shadow .15s ease; border:1px solid rgba(0,0,0,0.04);
+    animation:cardIn .35s ease backwards;
   }
   .game-card:hover{ transform:translateY(-4px); box-shadow:0 16px 30px -14px rgba(22,33,62,0.28); }
   .game-card.soon{ cursor:default; opacity:0.6; }
@@ -518,8 +522,8 @@
       grid.innerHTML = '<div class="empty" style="grid-column:1/-1">ما فيه طلاب بعد — ضيف أول طالب تحت</div>';
       return;
     }
-    grid.innerHTML = currentStudents.map(s => `
-      <div class="student-box" id="student-${s.id}">
+    grid.innerHTML = currentStudents.map((s, i) => `
+      <div class="student-box" id="student-${s.id}" style="animation-delay:${Math.min(i*35,400)}ms;">
         <button class="sb-menu-btn" onclick="openStudentMenu(${s.id})">⋮</button>
         <div class="sb-top">
           <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.is_leader ? '👑 ' : ''}${s.name}</div>
@@ -917,8 +921,8 @@
     const grid = document.getElementById('badgeButtonsGrid');
     if(!badges){ grid.innerHTML = '<div class="empty">تعذر تحميل الأوسمة</div>'; }
     else {
-      grid.innerHTML = Object.entries(badges).map(([key, b]) => `
-        <button class="badge-btn ${b.points >= 0 ? 'pos' : 'neg'}" onclick="applyBadge('${key}', this)">
+      grid.innerHTML = Object.entries(badges).map(([key, b], i) => `
+        <button class="badge-btn ${b.points >= 0 ? 'pos' : 'neg'}" style="animation-delay:${i*25}ms;" onclick="applyBadge('${key}', this)">
           <span class="badge-btn-icon">${b.icon}</span>
           <span class="badge-btn-text">
             <div class="badge-btn-label">${b.label}</div>
@@ -965,6 +969,7 @@
 
     const badge = BADGES_CACHE[type];
     showBadgeToast(`${badge.icon} ${badge.label} — النقاط الآن: ${data.student.score}`);
+    showStickerBurst(badge.icon);
   }
 
   // ===== قائمة خيارات الطالب (٣ نقاط) =====
@@ -1002,10 +1007,11 @@
     document.getElementById('menuModalTitle').textContent = student ? student.name : 'خيارات الطالب';
 
     const container = document.getElementById('menuItemsContainer');
+    let itemIndex = 0;
     container.innerHTML = STUDENT_MENU.map(group => `
       ${group.section ? `<div class="menu-section-title">${group.section}</div>` : ''}
       ${group.items.map(item => `
-        <div class="menu-item ${item.danger ? 'danger' : ''} ${item.soon ? 'disabled' : ''}" ${item.soon ? '' : `onclick="runStudentMenuAction('${item.key}')"`}>
+        <div class="menu-item ${item.danger ? 'danger' : ''} ${item.soon ? 'disabled' : ''}" style="animation-delay:${(itemIndex++)*20}ms;" ${item.soon ? '' : `onclick="runStudentMenuAction('${item.key}')"`}>
           <div class="menu-icon" style="background:${item.color};">${item.icon}</div>
           <div class="menu-label">${item.label}</div>
           ${item.soon ? '<span class="menu-soon-tag">قريبًا</span>' : ''}
