@@ -82,6 +82,10 @@ async function initDB() {
       );
     `);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_badges JSONB;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS school_name VARCHAR(100);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS principal_name VARCHAR(100);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS gender VARCHAR(10);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS stage VARCHAR(20);`);
     await pool.query(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS grade SMALLINT;`);
@@ -1039,6 +1043,57 @@ app.get('/api/export', authenticateToken, async (req, res) => {
 app.delete('/api/account/data', authenticateToken, async (req, res) => {
   try {
     await pool.query('DELETE FROM classes WHERE user_id = $1', [req.user.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+// ===== الملف الشخصي (حسابي) =====
+app.get('/api/account', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT first_name, last_name, username, school_name, principal_name, gender, avatar_data FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'الحساب غير موجود' });
+    const u = result.rows[0];
+    res.json({
+      success: true,
+      account: {
+        firstName: u.first_name, lastName: u.last_name, username: u.username,
+        schoolName: u.school_name, principalName: u.principal_name, gender: u.gender,
+        avatarData: u.avatar_data
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+app.put('/api/account', authenticateToken, async (req, res) => {
+  const { firstName, lastName, schoolName, principalName, gender } = req.body;
+  if (!firstName || !firstName.trim()) {
+    return res.status(400).json({ success: false, message: 'الاسم مطلوب' });
+  }
+  try {
+    await pool.query(
+      'UPDATE users SET first_name = $1, last_name = $2, school_name = $3, principal_name = $4, gender = $5 WHERE id = $6',
+      [firstName.trim(), (lastName || '').trim(), schoolName || '', principalName || '', gender || '', req.user.userId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });
+  }
+});
+
+app.put('/api/account/avatar', authenticateToken, async (req, res) => {
+  const { avatarData } = req.body;
+  if (avatarData && avatarData.length > 600000) {
+    return res.status(400).json({ success: false, message: 'حجم الصورة كبير جدًا، اختر صورة أصغر' });
+  }
+  try {
+    await pool.query('UPDATE users SET avatar_data = $1 WHERE id = $2', [avatarData || null, req.user.userId]);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: 'خطأ بالسيرفر' });

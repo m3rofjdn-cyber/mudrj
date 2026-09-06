@@ -88,6 +88,8 @@
   .btn-save{ background:var(--ink); color:#fff; }
   .btn-cancel{ background:var(--paper); color:var(--text-mute); }
 </style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
 </head>
 <body>
 
@@ -97,7 +99,7 @@
 </header>
 
 <main>
-  <div class="profile-card">
+  <div class="profile-card" style="cursor:pointer;" onclick="location.href='/account.html'">
     <div class="profile-avatar" id="avatarInitial">م</div>
     <div>
       <div class="profile-name" id="userName">...</div>
@@ -272,17 +274,17 @@
       overrides[inp.dataset.key] = parseFloat(inp.value);
     });
     const data = await api('/api/badges', { method:'PUT', body: JSON.stringify({ overrides }) });
-    if(data && data.success){ closeBadgeEditor(); alert('تم حفظ التعديلات'); }
-    else alert('تعذر الحفظ');
+    if(data && data.success){ closeBadgeEditor(); await uiAlert('تم حفظ التعديلات ✓'); }
+    else await uiAlert('تعذر الحفظ');
   }
 
   // ===== أخبر صديقًا =====
-  function inviteFriend(){
+  async function inviteFriend(){
     const url = window.location.origin;
     const text = `جرّب "مُدرَج" لإدارة فصولك وطلابك بسهولة: ${url}`;
     if(navigator.share){ navigator.share({ text }); }
-    else if(navigator.clipboard){ navigator.clipboard.writeText(text); alert('تم نسخ رابط الدعوة'); }
-    else { prompt('انسخ الرابط:', text); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(text); await uiAlert('تم نسخ رابط الدعوة ✓'); }
+    else { await uiPrompt('انسخ هذا الرابط:', text, 'دعوة صديق'); }
   }
 
   // ===== تصدير البيانات =====
@@ -294,16 +296,18 @@
       const a = document.createElement('a');
       a.href = url; a.download = 'mudraj-backup.json'; a.click();
       URL.revokeObjectURL(url);
-    }catch(e){ alert('تعذر تحميل النسخة الاحتياطية'); }
+    }catch(e){ await uiAlert('تعذر تحميل النسخة الاحتياطية'); }
   }
 
   // ===== حذف كل البيانات =====
   async function deleteAllData(){
-    if(!confirm('متأكد؟ راح تنحذف كل فصولك وطلابك نهائيًا ولا يمكن التراجع.')) return;
-    if(!confirm('تأكيد أخير: هذا الإجراء نهائي. متابعة؟')) return;
+    const ok1 = await uiConfirm('راح تنحذف كل فصولك وطلابك نهائيًا ولا يمكن التراجع.', 'متأكد؟', true);
+    if(!ok1) return;
+    const ok2 = await uiConfirm('هذا تأكيد أخير — الإجراء نهائي.', 'تأكيد نهائي', true);
+    if(!ok2) return;
     const data = await api('/api/account/data', { method:'DELETE' });
-    if(data && data.success){ alert('تم حذف كل البيانات'); location.href = '/dashboard.html'; }
-    else alert('تعذر الحذف');
+    if(data && data.success){ await uiAlert('تم حذف كل البيانات'); location.href = '/dashboard.html'; }
+    else await uiAlert('تعذر الحذف');
   }
 
   // ===== نصوص المعلومات =====

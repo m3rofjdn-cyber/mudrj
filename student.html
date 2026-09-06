@@ -101,6 +101,10 @@
     .card, .profile-top{ border:1px solid #ccc; box-shadow:none; break-inside:avoid; }
   }
 </style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -109,6 +113,7 @@
     <button class="back-btn" id="backBtn" onclick="history.back()">→</button>
     <div class="head-title">ملف الطالب</div>
   </div>
+  <button class="back-btn" id="downloadPdfBtn" onclick="downloadStudentPdf()" style="border:1px solid rgba(255,255,255,0.25); border-radius:8px; padding:6px 14px; font-size:12.5px;">⬇️ تنزيل PDF</button>
 </header>
 
 <main>
@@ -273,8 +278,29 @@
     }
 
     if(params.get('print') === '1'){
-      setTimeout(() => window.print(), 400);
+      setTimeout(() => downloadStudentPdf(), 500);
     }
+  }
+
+  async function downloadStudentPdf(){
+    const btn = document.getElementById('downloadPdfBtn');
+    const original = btn.textContent;
+    btn.textContent = '⏳ جارٍ التجهيز...';
+    btn.disabled = true;
+    try{
+      const el = document.getElementById('content');
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#F7F4EC' });
+      const imgData = canvas.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const name = document.getElementById('pName').textContent || 'طالب';
+      pdf.save(`كشف-${name}.pdf`);
+    }catch(e){
+      await uiAlert('تعذر إنشاء ملف PDF، جرّب مرة أخرى');
+    }
+    btn.textContent = original;
+    btn.disabled = false;
   }
 
   let saveTimeout = null;

@@ -77,6 +77,8 @@
   .btn-primary:disabled{ opacity:0.7; }
   .btn-ghost{ padding:13px 20px; border:1px solid var(--line); border-radius:10px; background:none; font-family:inherit; font-size:14px; cursor:pointer; color:var(--text-mute); }
 </style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
 </head>
 <body>
 
@@ -90,18 +92,30 @@
 
   <!-- خطوة الرفع -->
   <div id="uploadStep">
-    <div class="step-title">ارفع ملف الفصول من نور</div>
-    <div class="step-sub">صدّر كشف الطلاب من نور بصيغة Excel أو PDF، وارفعه هنا — بنحلله ونجهزلك الفصول والطلاب تلقائيًا.</div>
+    <div class="step-title">استورد من نور</div>
+    <div class="step-sub">طريقتين: ارفع ملف مصدّر من نور، أو استخدم أداة سريعة تجمع البيانات لك مباشرة من صفحة نور.</div>
 
+    <div class="howto" style="margin-top:0; margin-bottom:22px;">
+      <b>🔖 الطريقة السريعة (موصى بها)</b><br>
+      اسحب هذا الزر لشريط المفضلات بالمتصفح (Bookmarks Bar):
+      <div style="margin:12px 0;">
+        <a id="bookmarkletLink" href="#" onclick="return false;" style="display:inline-block; background:var(--ink); color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; font-size:13.5px; cursor:grab;">📥 جلب من نور</a>
+      </div>
+      بعدها ادخل نور، افتح أي صفحة فيها كشف طلاب أو قائمة فصولك، واضغط الزر من المفضلات. بينسخلك البيانات تلقائيًا — رجع هنا والصقها بالمربع تحت.
+    </div>
+
+    <div class="field" style="margin-bottom:24px;">
+      <label style="display:block; font-size:12.5px; font-weight:500; color:var(--text-mute); margin-bottom:6px;">الصق البيانات المنسوخة هنا</label>
+      <textarea id="pasteBox" rows="4" placeholder="الصق هنا بعد ما تضغط زر '📥 جلب من نور' وأنت بصفحة نور" style="width:100%; padding:12px; border:1px solid var(--line); border-radius:10px; font-family:monospace; font-size:12.5px; resize:vertical;"></textarea>
+      <button onclick="parsePasted()" style="margin-top:10px; padding:11px 20px; border:none; border-radius:9px; background:var(--gold); color:var(--ink); font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;">معاينة البيانات الملصوقة</button>
+    </div>
+
+    <div class="step-title" style="font-size:15px;">أو ارفع ملف مباشرة</div>
     <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
       <div class="icon">📄</div>
       <div class="main-text">اضغط لاختيار ملف أو اسحبه هنا</div>
       <div class="sub-text">Excel (.xlsx) أو PDF — حتى ١٠ ميجا</div>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.pdf">
-    </div>
-
-    <div class="howto">
-      <b>وين ألقى الملف بنور؟</b> من داخل نور، افتح صفحة "المعلمين" ← "كشف الطلاب" أو "بيانات الفصل"، وابحث عن خيار تصدير (تصدير Excel أو طباعة PDF). كل فصل بورقة/شيت لحاله يعطي نتيجة أدق.
     </div>
   </div>
 
@@ -129,6 +143,85 @@
   if(!token){ window.location.href = '/'; }
 
   let parsedGroups = [];
+
+  // ===== أداة المفضلات: تفحص أي صفحة وتجمع الأسماء العربية من الجداول =====
+  const bookmarkletCode = `(function(){
+    function looksLikeArabicName(val){
+      if(typeof val !== 'string') return false;
+      var t = val.trim();
+      if(t.length < 4) return false;
+      var words = t.split(/\s+/);
+      if(words.length < 2) return false;
+      var arabicChars = (t.match(/[\u0600-\u06FF]/g) || []).length;
+      return (arabicChars / t.length) > 0.6;
+    }
+    var groups = [];
+    var tables = document.querySelectorAll('table');
+    tables.forEach(function(table, ti){
+      var rows = table.querySelectorAll('tr');
+      var names = [];
+      rows.forEach(function(row){
+        var cells = row.querySelectorAll('td,th');
+        cells.forEach(function(cell){
+          var text = cell.innerText || cell.textContent || '';
+          if(looksLikeArabicName(text)) names.push(text.trim());
+        });
+      });
+      names = names.filter(function(v,i,a){ return a.indexOf(v)===i; });
+      if(names.length >= 3){
+        var heading = '';
+        var prev = table.previousElementSibling;
+        var tries = 0;
+        while(prev && tries < 6 && !heading){
+          var txt = (prev.innerText || '').trim();
+          if(txt && txt.length < 60 && txt.length > 2) heading = txt;
+          prev = prev.previousElementSibling;
+          tries++;
+        }
+        groups.push({ suggestedClassName: heading || ('فصل مكتشف ' + (ti+1)), students: names });
+      }
+    });
+    if(groups.length === 0){
+      alert('ما لقيت جدول فيه أسماء طلاب واضحة بهذي الصفحة. جرّب صفحة ثانية فيها كشف الطلاب أو قائمة الفصول.');
+      return;
+    }
+    var json = JSON.stringify(groups);
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = json;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('تم نسخ بيانات ' + groups.length + ' فصل! روح صفحة الاستيراد بمُدرَج والصقها بالمربع.');
+    }catch(e){
+      prompt('انسخ هذا النص والصقه بصفحة الاستيراد:', json);
+    }
+  })();`;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('bookmarkletLink').href = 'javascript:' + encodeURIComponent(bookmarkletCode);
+  });
+
+  function parsePasted(){
+    hideAlert();
+    const raw = document.getElementById('pasteBox').value.trim();
+    if(!raw){ showAlert('الصق البيانات أول', 'error'); return; }
+    try{
+      const groups = JSON.parse(raw);
+      if(!Array.isArray(groups) || groups.length === 0) throw new Error('empty');
+      parsedGroups = groups.map(g => ({
+        suggestedClassName: g.suggestedClassName || 'فصل بدون اسم',
+        students: Array.isArray(g.students) ? g.students : []
+      }));
+      document.getElementById('uploadStep').style.display = 'none';
+      renderPreview();
+    }catch(e){
+      showAlert('البيانات الملصوقة غير صحيحة، تأكد إنك نسختها كاملة من زر "جلب من نور"', 'error');
+    }
+  }
 
   function showAlert(msg, type){
     const box = document.getElementById('alertBox');

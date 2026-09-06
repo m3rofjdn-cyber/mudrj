@@ -136,6 +136,8 @@
   .nav-item.disabled{ opacity:0.4; cursor:default; }
   .nav-icon{ font-size:18px; }
 </style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
 </head>
 <body>
 
@@ -145,7 +147,7 @@
     <button class="head-btn" onclick="location.href='/leaderboard.html'">🏆 الترتيب العام</button>
     <button class="head-btn" onclick="location.href='/import.html'">📥 استيراد من نور</button>
     <button class="head-btn primary" onclick="openModal()">+ فصل جديد</button>
-    <button class="head-btn" onclick="logout()">خروج</button>
+    <button class="head-btn" onclick="location.href='/settings.html'">⚙️ الإعدادات</button>
   </div>
 </header>
 
@@ -273,15 +275,19 @@
   }
 
   async function deleteClass(id){
-    if(!confirm('حذف الفصل وكل طلابه؟ ما ينرجع.')) return;
+    const ok = await uiConfirm('حذف الفصل وكل طلابه؟ ما ينرجع.', 'تأكيد الحذف', true);
+    if(!ok) return;
     await api('/api/classes/' + id, { method:'DELETE' });
     loadClasses();
   }
 
-  function openClassMenu(id, name){
-    const choice = prompt(`خيارات فصل "${name}":\n1. أرشفة الفصل (يختفي من القائمة، تقدر تسترجعه لاحقًا)\n2. حذف نهائي (لا يمكن التراجع)\n\nاكتب رقم الخيار:`);
-    if(choice === '1') archiveClass(id);
-    else if(choice === '2') deleteClass(id);
+  async function openClassMenu(id, name){
+    const choice = await uiChoose(`اختر إجراء لفصل "${name}"`, [
+      { label:'🗄️ أرشفة الفصل (تقدر تسترجعه لاحقًا)', value:'archive' },
+      { label:'🗑️ حذف نهائي (لا يمكن التراجع)', value:'delete' },
+    ], 'خيارات الفصل');
+    if(choice === 'archive') archiveClass(id);
+    else if(choice === 'delete') deleteClass(id);
   }
 
   async function archiveClass(id){

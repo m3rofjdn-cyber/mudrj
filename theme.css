@@ -1,0 +1,17 @@
+/* ثيم مُدرَج المشترك — الوضع الداكن يطبّق على كل الصفحات اللي تحمّل هذا الملف */
+[data-theme="dark"]{
+  --paper:#11151D;
+  --card:#1B212C;
+  --text:#ECEEF0;
+  --text-mute:#909BA8;
+  --line:#2B3242;
+  --danger-bg:#3A2422;
+  --ok-bg:#1C3128;
+  --info-bg:#1C2A3E;
+  --ink-soft:#324268;
+}
+[data-theme="dark"] body{ background:var(--paper); color:var(--text); }
+[data-theme="dark"] .skeleton{
+  background:linear-gradient(90deg, #232A38 25%, #1B212C 37%, #232A38 63%);
+  background-size:400% 100%;
+}

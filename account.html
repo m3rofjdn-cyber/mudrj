@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُدرَج — حسابي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
+<style>
+  :root{
+    --ink:#16213E; --ink-soft:#2A3A63; --gold:#C9922B; --gold-soft:#E8C784;
+    --paper:#F7F4EC; --card:#FFFFFF; --text:#20242E; --text-mute:#5B6472;
+    --line:#E4DFD1; --danger:#B3432B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--paper); color:var(--text); min-height:100vh; }
+
+  header{ background:var(--ink); color:#fff; padding:16px 32px; display:flex; align-items:center; gap:16px; }
+  .back-btn{ background:none; border:none; color:#fff; font-size:18px; cursor:pointer; }
+  .head-title{ font-weight:600; font-size:16px; }
+
+  main{ max-width:480px; margin:0 auto; padding:36px 20px 60px; }
+
+  .avatar-wrap{ display:flex; flex-direction:column; align-items:center; margin-bottom:24px; }
+  .avatar-circle{
+    width:110px; height:110px; border-radius:50%; position:relative; border:3px solid var(--gold);
+    padding:4px;
+  }
+  .avatar-inner{
+    width:100%; height:100%; border-radius:50%; background:var(--ink); display:flex; align-items:center;
+    justify-content:center; color:#fff; font-size:38px; font-weight:600; overflow:hidden;
+  }
+  .avatar-inner img{ width:100%; height:100%; object-fit:cover; }
+  .avatar-crown{
+    position:absolute; top:-2px; left:-2px; width:26px; height:26px; border-radius:50%; background:var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:13px; border:2px solid #fff;
+  }
+  .avatar-camera{
+    position:absolute; bottom:2px; left:2px; width:32px; height:32px; border-radius:50%; background:var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size:14px; color:#fff; border:2px solid #fff;
+    cursor:pointer;
+  }
+  .avatar-name{ font-size:17px; font-weight:700; margin-top:14px; }
+  #avatarInput{ display:none; }
+
+  .field-card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+  .field-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .field-label{ font-size:12.5px; color:var(--text-mute); font-weight:500; white-space:nowrap; }
+  .field-input{
+    flex:1; border:none; background:none; text-align:left; font-family:inherit; font-size:13.5px; color:var(--text);
+    padding:4px 0;
+  }
+  .field-input:focus{ outline:none; }
+  .field-input[readonly]{ color:var(--text-mute); }
+  .field-count{ font-size:10.5px; color:var(--text-mute); font-weight:300; margin-top:4px; }
+
+  .gender-toggle{ display:flex; background:var(--paper); border-radius:20px; padding:3px; gap:2px; }
+  .gender-btn{
+    flex:1; padding:8px 14px; border:none; border-radius:18px; background:none; font-family:inherit;
+    font-size:12.5px; font-weight:600; color:var(--text-mute); cursor:pointer; transition:all .15s ease;
+  }
+  .gender-btn.active{ background:#fff; color:var(--ink); box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+
+  .save-bar{ position:sticky; bottom:0; padding:16px 0; background:linear-gradient(to top, var(--paper) 60%, transparent); }
+  .save-btn{
+    width:100%; padding:14px; border:none; border-radius:12px; background:var(--ink); color:#fff;
+    font-family:inherit; font-size:14.5px; font-weight:700; cursor:pointer;
+  }
+  .save-btn:disabled{ opacity:0.7; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="location.href='/settings.html'">→</button>
+  <div class="head-title">حسابي</div>
+</header>
+
+<main>
+  <div class="avatar-wrap">
+    <div class="avatar-circle">
+      <div class="avatar-inner" id="avatarInner">م</div>
+      <div class="avatar-crown">👑</div>
+      <div class="avatar-camera" onclick="document.getElementById('avatarInput').click()">📷</div>
+    </div>
+    <input type="file" id="avatarInput" accept="image/*" onchange="handleAvatarUpload(event)">
+    <div class="avatar-name" id="avatarName">...</div>
+  </div>
+
+  <div class="field-card">
+    <div class="field-row">
+      <span class="field-label">الاسم :</span>
+      <input class="field-input" id="firstNameInput" maxlength="40" oninput="updateCount('firstNameInput','firstNameCount',40)">
+    </div>
+    <div class="field-count" id="firstNameCount">0/40</div>
+  </div>
+
+  <div class="field-card">
+    <div class="field-row">
+      <span class="field-label">اسم المستخدم :</span>
+      <input class="field-input" id="usernameInput" readonly>
+    </div>
+  </div>
+
+  <div class="field-card">
+    <div class="field-row">
+      <span class="field-label">اسم المدرسة :</span>
+      <input class="field-input" id="schoolInput" maxlength="50" oninput="updateCount('schoolInput','schoolCount',50)">
+    </div>
+    <div class="field-count" id="schoolCount">0/50</div>
+  </div>
+
+  <div class="field-card">
+    <div class="field-row">
+      <span class="field-label">اسم مدير المدرسة :</span>
+      <input class="field-input" id="principalInput" maxlength="40" oninput="updateCount('principalInput','principalCount',40)">
+    </div>
+    <div class="field-count" id="principalCount">0/40</div>
+  </div>
+
+  <div class="field-card">
+    <div class="field-row">
+      <span class="field-label">الجنس :</span>
+      <div class="gender-toggle">
+        <button class="gender-btn" id="genderMale" onclick="setGender('معلم')">معلم</button>
+        <button class="gender-btn" id="genderFemale" onclick="setGender('معلمة')">معلمة</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <button class="save-btn" id="saveBtn" onclick="saveAccount()">حفظ التغييرات</button>
+  </div>
+</main>
+
+<script>
+  const token = localStorage.getItem('mudraj_token');
+  if(!token){ window.location.href = '/'; }
+
+  let currentGender = '';
+
+  async function api(path, options={}){
+    const res = await fetch(path, { ...options, headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + token, ...(options.headers||{}) } });
+    if(res.status === 401 || res.status === 403){ window.location.href = '/'; return; }
+    return res.json();
+  }
+
+  function updateCount(inputId, countId, max){
+    document.getElementById(countId).textContent = document.getElementById(inputId).value.length + '/' + max;
+  }
+
+  function setGender(g){
+    currentGender = g;
+    document.getElementById('genderMale').classList.toggle('active', g === 'معلم');
+    document.getElementById('genderFemale').classList.toggle('active', g === 'معلمة');
+  }
+
+  async function loadAccount(){
+    const data = await api('/api/account');
+    if(!data || !data.success) return;
+    const a = data.account;
+
+    document.getElementById('firstNameInput').value = a.firstName || '';
+    document.getElementById('usernameInput').value = a.username || '';
+    document.getElementById('schoolInput').value = a.schoolName || '';
+    document.getElementById('principalInput').value = a.principalName || '';
+    updateCount('firstNameInput','firstNameCount',40);
+    updateCount('schoolInput','schoolCount',50);
+    updateCount('principalInput','principalCount',40);
+    setGender(a.gender || 'معلم');
+
+    document.getElementById('avatarName').textContent = a.firstName || a.username;
+    const avatarInner = document.getElementById('avatarInner');
+    if(a.avatarData){
+      avatarInner.innerHTML = `<img src="${a.avatarData}">`;
+    } else {
+      avatarInner.textContent = (a.firstName || a.username || 'م').charAt(0);
+    }
+  }
+
+  async function saveAccount(){
+    const firstName = document.getElementById('firstNameInput').value.trim();
+    if(!firstName){ await uiAlert('الاسم مطلوب'); return; }
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+
+    const data = await api('/api/account', { method:'PUT', body: JSON.stringify({
+      firstName,
+      schoolName: document.getElementById('schoolInput').value.trim(),
+      principalName: document.getElementById('principalInput').value.trim(),
+      gender: currentGender
+    })});
+
+    btn.disabled = false; btn.textContent = 'حفظ التغييرات';
+
+    if(data && data.success){
+      const user = JSON.parse(localStorage.getItem('mudraj_user') || '{}');
+      user.firstName = firstName;
+      localStorage.setItem('mudraj_user', JSON.stringify(user));
+      await uiAlert('تم حفظ بياناتك ✓');
+    } else {
+      await uiAlert((data && data.message) || 'تعذر الحفظ');
+    }
+  }
+
+  function handleAvatarUpload(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ uiAlert('اختر ملف صورة صحيح'); return; }
+
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      const img = new Image();
+      img.onload = async function(){
+        const canvas = document.createElement('canvas');
+        const maxSize = 240;
+        let { width, height } = img;
+        if(width > height){ height = height * (maxSize/width); width = maxSize; }
+        else { width = width * (maxSize/height); height = maxSize; }
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        document.getElementById('avatarInner').innerHTML = `<img src="${dataUrl}">`;
+        const res = await api('/api/account/avatar', { method:'PUT', body: JSON.stringify({ avatarData: dataUrl }) });
+        if(!res || !res.success) await uiAlert((res && res.message) || 'تعذر رفع الصورة');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  loadAccount();
+</script>
+</body>
+</html>

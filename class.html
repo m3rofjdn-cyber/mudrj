@@ -293,6 +293,8 @@
     background:var(--ink); color:#fff; font-family:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
   }
 </style>
+<link rel="stylesheet" href="/theme.css">
+<script src="/ui.js"></script>
 </head>
 <body>
 
@@ -533,14 +535,15 @@
     const name = input.value.trim();
     if(!name) return;
     const data = await api('/api/students', { method:'POST', body: JSON.stringify({ classId, name }) });
-    if(!data || !data.success){ alert((data && data.message) || 'تعذر إضافة الطالب'); return; }
+    if(!data || !data.success){ await uiAlert((data && data.message) || 'تعذر إضافة الطالب'); return; }
     currentStudents.push(data.student);
     input.value = '';
     renderStudents();
   }
 
   async function deleteStudent(id){
-    if(!confirm('حذف هذا الطالب؟')) return;
+    const ok = await uiConfirm('حذف هذا الطالب نهائيًا؟', 'تأكيد الحذف', true);
+    if(!ok) return;
     await api('/api/students/' + id, { method:'DELETE' });
     currentStudents = currentStudents.filter(s => s.id !== id);
     renderStudents();
@@ -577,7 +580,7 @@
 
   async function saveAttendance(){
     const date = document.getElementById('attDate').value;
-    if(!date) return alert('اختر تاريخ');
+    if(!date){ await uiAlert('اختر تاريخ أول'); return; }
     const records = [];
     document.querySelectorAll('.att-row').forEach(row => {
       const on = row.querySelector('.att-choice.on');
@@ -587,7 +590,7 @@
       }
     });
     const data = await api('/api/classes/' + classId + '/attendance', { method:'POST', body: JSON.stringify({ date, records }) });
-    if(data && data.success) alert('تم حفظ التحضير'); else alert('تعذر الحفظ');
+    await uiAlert(data && data.success ? 'تم حفظ التحضير ✓' : 'تعذر الحفظ');
   }
 
   // ===== العجلة =====
@@ -704,9 +707,9 @@
     return a;
   }
 
-  function splitTeams(){
+  async function splitTeams(){
     if(currentStudents.length < 2){
-      alert('لازم فيه طالبين على الأقل بالفصل');
+      await uiAlert('لازم فيه طالبين على الأقل بالفصل');
       return;
     }
     const shuffled = shuffleArray(currentStudents);
@@ -850,9 +853,9 @@
     display.classList.remove('landed');
   }
 
-  function startTrain(){
+  async function startTrain(){
     if(trainRunning) return;
-    if(currentStudents.length === 0){ alert('ما فيه طلاب بهذا الفصل'); return; }
+    if(currentStudents.length === 0){ await uiAlert('ما فيه طلاب بهذا الفصل'); return; }
 
     trainRunning = true;
     const btn = document.getElementById('trainGoBtn');
@@ -1024,13 +1027,13 @@
     }
   }
 
-  function shareStudentProfile(){
+  async function shareStudentProfile(){
     closeStudentMenu();
     const url = window.location.origin + '/student.html?id=' + menuStudentId;
     if(navigator.clipboard){
       navigator.clipboard.writeText(url).then(() => showBadgeToast('🔗 تم نسخ رابط ملف الطالب'));
     } else {
-      prompt('انسخ الرابط:', url);
+      await uiPrompt('انسخ هذا الرابط يدويًا:', url, 'رابط ملف الطالب');
     }
   }
 
@@ -1044,32 +1047,29 @@
     const data = await api('/api/classes');
     if(!data || !data.success) return;
     const others = data.classes.filter(c => c.id !== Number(classId));
-    if(others.length === 0){ alert('ما عندك فصول ثانية تنقل لها الطالب'); return; }
+    if(others.length === 0){ await uiAlert('ما عندك فصول ثانية تنقل لها الطالب'); return; }
 
-    const options = others.map((c,i) => `${i+1}. ${c.name}`).join('\n');
-    const choice = prompt('اختر رقم الفصل الجديد:\n' + options);
-    const idx = Number(choice) - 1;
-    if(isNaN(idx) || !others[idx]) return;
+    const target = await uiChoose('اختر الفصل الجديد', others.map(c => ({ label: c.name, value: c.id })), 'نقل إلى فصل آخر');
+    if(!target) return;
 
-    const target = others[idx];
-    const result = await api('/api/students/' + menuStudentId + '/move', { method:'PUT', body: JSON.stringify({ classId: target.id }) });
+    const result = await api('/api/students/' + menuStudentId + '/move', { method:'PUT', body: JSON.stringify({ classId: target }) });
     if(result && result.success){
+      const targetClass = others.find(c => c.id === target);
       currentStudents = currentStudents.filter(s => s.id !== menuStudentId);
       renderStudents();
-      showBadgeToast('↗️ تم نقل الطالب إلى ' + target.name);
+      showBadgeToast('↗️ تم نقل الطالب إلى ' + (targetClass ? targetClass.name : ''));
     } else {
-      alert((result && result.message) || 'تعذر نقل الطالب');
+      await uiAlert((result && result.message) || 'تعذر نقل الطالب');
     }
   }
 
   // ===== الملصقات التحفيزية (احتفال بصري سريع) =====
   const STICKERS = ['🌟','👏','🎉','💪','🏆','🔥','😍','🥳'];
-  function openStickerPicker(){
+  async function openStickerPicker(){
     closeStudentMenu();
-    const pick = prompt('اختر رقم الملصق:\n' + STICKERS.map((s,i)=>`${i+1}. ${s}`).join('   '));
-    const idx = Number(pick) - 1;
-    if(isNaN(idx) || !STICKERS[idx]) return;
-    showStickerBurst(STICKERS[idx]);
+    const emoji = await uiChoose('اختر ملصق تحفيزي', STICKERS.map(s => ({ label: s, value: s })), 'ملصق تحفيزي');
+    if(!emoji) return;
+    showStickerBurst(emoji);
   }
   function showStickerBurst(emoji){
     const el = document.createElement('div');
@@ -1094,7 +1094,7 @@
   // ===== الخطة التعليمية =====
   async function editLearningPlan(){
     closeStudentMenu();
-    const current = prompt('اكتب الخطة التعليمية لهذا الطالب:');
+    const current = await uiPrompt('اكتب الخطة التعليمية لهذا الطالب:', '', 'الخطة التعليمية');
     if(current === null) return;
     const data = await api('/api/students/' + menuStudentId + '/learning-plan', { method:'PUT', body: JSON.stringify({ plan: current }) });
     if(data && data.success) showBadgeToast('💜 تم حفظ الخطة التعليمية');
@@ -1110,15 +1110,14 @@
   // ===== إشعار ضعف / إحالة للإدارة =====
   async function sendNotice(type, label){
     closeStudentMenu();
-    const message = prompt(`اكتب تفاصيل "${label}" (اختياري):`) || '';
-    const data = await api('/api/students/' + menuStudentId + '/notice', { method:'POST', body: JSON.stringify({ type, message }) });
+    const message = await uiPrompt(`اكتب تفاصيل "${label}" (اختياري):`, '', label);
+    const data = await api('/api/students/' + menuStudentId + '/notice', { method:'POST', body: JSON.stringify({ type, message: message || '' }) });
     if(data && data.success) showBadgeToast('✅ تم تسجيل: ' + label);
   }
 
   // ===== محادثة ولي الأمر =====
   async function chatParent(){
     closeStudentMenu();
-    const profileData = await api('/api/students/' + menuStudentId + '/profile');
     let phone = null;
     try{
       const res = await fetch('/api/students/' + menuStudentId + '/profile', { headers:{ 'Authorization':'Bearer ' + token } });
@@ -1127,7 +1126,7 @@
     }catch(e){}
 
     if(!phone){
-      phone = prompt('ما فيه رقم جوال محفوظ لولي الأمر. أدخله الآن (مع رمز الدولة، مثال: 9665xxxxxxxx):');
+      phone = await uiPrompt('ما فيه رقم جوال محفوظ لولي الأمر. أدخله الآن (مع رمز الدولة، مثال: 9665xxxxxxxx):', '', 'رقم جوال ولي الأمر');
       if(!phone) return;
       await api('/api/students/' + menuStudentId + '/parent-phone', { method:'PUT', body: JSON.stringify({ phone }) });
     }
