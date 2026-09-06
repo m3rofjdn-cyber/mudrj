@@ -41,7 +41,7 @@
   }
   .empty p{ margin-top:8px; font-size:13.5px; font-weight:300; }
 
-  .stage-block{ margin-bottom:32px; }
+  .stage-block{ margin-bottom:32px; animation:mdjFadeIn .35s ease backwards; }
   .stage-title{ font-size:15px; font-weight:600; color:var(--ink); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
   .stage-title .bar{ width:4px; height:16px; background:var(--gold); border-radius:2px; }
 
@@ -53,7 +53,7 @@
   .class-card{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
     padding:18px; cursor:pointer; transition:border-color .15s ease, transform .1s ease;
-    position:relative;
+    position:relative; animation:mdjFadeIn .3s ease backwards;
   }
   .class-card:hover{ border-color:var(--ink-soft); transform:translateY(-2px); }
   .class-card .cname{ font-size:15.5px; font-weight:600; margin-bottom:6px; }
@@ -259,10 +259,11 @@
       if(!groups[stage]) continue;
       const label = stage === 'غير محدد' ? '📥 مستوردة من نور' : `${stageIcon(stage)} ${stage}`;
       html += `<div class="stage-block"><div class="stage-title"><span class="bar"></span>${label}</div><div class="classes-grid">`;
+      let cardIndex = 0;
       groups[stage].forEach(c => {
         const avg = c.students.length ? Math.round(c.students.reduce((a,s)=>a+s.score,0) / c.students.length) : 0;
         html += `
-          <div class="class-card" onclick="location.href='/class.html?id=${c.id}'">
+          <div class="class-card" style="animation-delay:${(cardIndex++)*40}ms;" onclick="location.href='/class.html?id=${c.id}'">
             <button class="class-del" onclick="event.stopPropagation(); openClassMenu(${c.id}, '${c.name.replace(/'/g,"\\'")}')" title="خيارات">⋮</button>
             <div class="cname">${c.name}</div>
             <div class="cmeta">${c.studentCount} طالب</div>

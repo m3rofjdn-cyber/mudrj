@@ -23,7 +23,7 @@
   main{ max-width:640px; margin:0 auto; padding:36px 24px 80px; }
   .lb-row{
     display:flex; align-items:center; gap:14px; background:var(--card); border:1px solid var(--line);
-    border-radius:10px; padding:14px 18px; margin-bottom:9px;
+    border-radius:10px; padding:14px 18px; margin-bottom:9px; animation:mdjFadeIn .3s ease backwards;
   }
   .lb-rank{ width:30px; text-align:center; font-weight:700; color:var(--text-mute); font-size:15px; }
   .lb-rank.top1{ color:var(--gold); font-size:18px; }
@@ -65,7 +65,7 @@
     if(data.leaderboard.length === 0){ list.innerHTML = '<div class="empty">ما فيه طلاب بعد بأي فصل</div>'; return; }
 
     list.innerHTML = data.leaderboard.map((s,i) => `
-      <div class="lb-row">
+      <div class="lb-row" style="animation-delay:${Math.min(i*30,400)}ms;">
         <div class="lb-rank ${i===0?'top1':i===1?'top2':i===2?'top3':''}">${i+1}</div>
         <div class="lb-info">
           <div class="lb-name">${s.name}</div>

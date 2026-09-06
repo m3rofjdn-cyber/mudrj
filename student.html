@@ -29,6 +29,7 @@
   .profile-top{
     background:var(--card); border:1px solid var(--line); border-radius:16px;
     padding:26px; display:flex; align-items:center; gap:22px; margin-bottom:20px; flex-wrap:wrap;
+    animation:mdjFadeIn .3s ease backwards;
   }
   .avatar{
     width:76px; height:76px; border-radius:50%; background:var(--ink);
@@ -46,7 +47,8 @@
   .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
   @media (max-width:700px){ .grid-2{ grid-template-columns:1fr; } }
 
-  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; animation:mdjFadeIn .35s ease backwards; }
+  .card:nth-of-type(2){ animation-delay:80ms; }
   .card-title{ font-size:14px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
   .card-title .bar{ width:4px; height:14px; background:var(--gold); border-radius:2px; }
 
@@ -79,6 +81,7 @@
 
   .activity-item{
     display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line);
+    animation:mdjFadeIn .3s ease backwards;
   }
   .activity-item:last-child{ border-bottom:none; }
   .activity-dot{
@@ -268,8 +271,8 @@
     if(data.activities.length === 0){
       list.innerHTML = '<div class="empty-note">ما فيه نشاطات مسجّلة بعد</div>';
     } else {
-      list.innerHTML = data.activities.map(a => `
-        <div class="activity-item">
+      list.innerHTML = data.activities.map((a,i) => `
+        <div class="activity-item" style="animation-delay:${i*35}ms;">
           <div class="activity-dot ${a.points >= 0 ? 'pos' : 'neg'}">${a.points >= 0 ? '+' : ''}${a.points}</div>
           <div class="activity-label">${a.label}</div>
           <div class="activity-time">${timeAgo(a.created_at)}</div>

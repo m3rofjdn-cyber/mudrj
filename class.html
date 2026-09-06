@@ -677,19 +677,31 @@
 
   function openGame(name){
     document.getElementById('gamesHub').style.display = 'none';
+    let target = null;
     if(name === 'connect4'){
-      document.getElementById('connect4Game').style.display = 'block';
+      target = document.getElementById('connect4Game');
+      target.style.display = 'block';
       resetToSetup();
     } else if(name === 'wheel'){
-      document.getElementById('wheelGame').style.display = 'block';
+      target = document.getElementById('wheelGame');
+      target.style.display = 'block';
       drawWheel();
     } else if(name === 'train'){
-      document.getElementById('trainGame').style.display = 'block';
+      target = document.getElementById('trainGame');
+      target.style.display = 'block';
       resetTrainVisual();
+    }
+    if(target){
+      target.style.animation = 'none';
+      void target.offsetWidth;
+      target.style.animation = 'mdjTabIn .3s cubic-bezier(0.22,1,0.36,1)';
     }
   }
   function closeGame(){
     document.getElementById('gamesHub').style.display = 'block';
+    document.getElementById('gamesHub').style.animation = 'none';
+    void document.getElementById('gamesHub').offsetWidth;
+    document.getElementById('gamesHub').style.animation = 'mdjTabIn .25s ease';
     document.getElementById('connect4Game').style.display = 'none';
     document.getElementById('wheelGame').style.display = 'none';
     document.getElementById('trainGame').style.display = 'none';
