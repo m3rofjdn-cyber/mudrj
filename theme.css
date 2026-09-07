@@ -3,6 +3,8 @@
 @keyframes mdjFadeIn{ from{ opacity:0; transform:translateY(10px) scale(0.98); } to{ opacity:1; transform:translateY(0) scale(1); } }
 @keyframes mdjTabIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
 
+@keyframes mdjNavPop{ from{ transform:scale(0.85); opacity:0.4; } to{ transform:scale(1); opacity:1; } }
+
 [data-theme="dark"]{
   --paper:#11151D;
   --card:#1B212C;
