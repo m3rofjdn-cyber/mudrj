@@ -203,6 +203,33 @@
   .menu-item.danger .menu-label{ color:var(--danger); }
   .menu-soon-tag{ font-size:10.5px; color:#9AA8A0; font-weight:600; }
 
+  /* ===== توافق لوحة الأوسمة وقائمة الطالب مع الوضع الداكن ===== */
+  [data-theme="dark"] .badge-modal{ background:#1B212C; border-color:#2B3242; }
+  [data-theme="dark"] .badge-modal-title{ color:#E7F3EC; }
+  [data-theme="dark"] .badge-modal-close{ background:#242B38; color:#9FD8B8; }
+  [data-theme="dark"] .badge-modal-close:hover{ background:#2C3542; }
+  [data-theme="dark"] .badge-modal-sub{ color:#8CA79A; }
+  [data-theme="dark"] .badge-btn.pos{ background:#1D3327; }
+  [data-theme="dark"] .badge-btn.pos:hover{ background:#254030; }
+  [data-theme="dark"] .badge-btn.neg{ background:#262B33; }
+  [data-theme="dark"] .badge-btn.neg:hover{ background:#2E3440; }
+  [data-theme="dark"] .badge-btn-label{ color:#E7F3EC; }
+  [data-theme="dark"] .badge-btn.pos .badge-btn-points{ color:#6FCF97; }
+  [data-theme="dark"] .badge-btn.neg .badge-btn-points{ color:#E0B84D; }
+  [data-theme="dark"] .menu-section-title{ color:#8CA79A; background:#1F2530; }
+  [data-theme="dark"] .menu-item{ border-bottom-color:#2B3242; }
+  [data-theme="dark"] .menu-item:hover{ background:#1F2530; }
+  [data-theme="dark"] .menu-item.danger:hover{ background:#2E2320; }
+  [data-theme="dark"] .menu-label{ color:#E7F3EC; }
+  [data-theme="dark"] .menu-soon-tag{ color:#6B7684; }
+  [data-theme="dark"] .sb-rate-btn:hover{ background:#242B38; }
+  [data-theme="dark"] .att-choice.late.on{ background:#3A2F16; color:#E0B84D; }
+  [data-theme="dark"] .team-box.red{ background:#2E2320; }
+  [data-theme="dark"] .team-box.blue{ background:#1D2836; }
+  [data-theme="dark"] .c4-turn-card.team-red{ background:linear-gradient(135deg,#2E2320,#3A2A24); }
+  [data-theme="dark"] .c4-turn-card.team-blue{ background:linear-gradient(135deg,#1D2836,#22304A); }
+  [data-theme="dark"] .train-display.landed{ background:linear-gradient(135deg,#3A2F16,#4A3C1C); color:#F0E4C8; }
+
   /* ===== مركز الألعاب ===== */
   .games-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:18px; }
   .game-card{
@@ -981,7 +1008,11 @@
 
     const badge = BADGES_CACHE[type];
     showBadgeToast(`${badge.icon} ${badge.label} — النقاط الآن: ${data.student.score}`);
-    showStickerBurst(badge.icon);
+
+    setTimeout(() => {
+      closeBadgePanel();
+      showStickerBurst(badge.icon);
+    }, 220);
   }
 
   // ===== قائمة خيارات الطالب (٣ نقاط) =====

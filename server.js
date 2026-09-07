@@ -1,7 +1,9 @@
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+// أعمدة NUMERIC (زي score و points) ترجع من postgres كنصوص افتراضيًا، هذا يسبب NaN عند الجمع/القسمة بالواجهة
+types.setTypeParser(1700, val => (val === null ? null : parseFloat(val)));
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
