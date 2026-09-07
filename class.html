@@ -31,20 +31,22 @@
   .head-btn.primary{ background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:600; }
 
   .tabs-bar{
-    display:flex; gap:4px; background:var(--card); border-bottom:1px solid var(--line);
-    padding:0 24px; position:sticky; top:65px; z-index:15; overflow-x:auto;
+    position:fixed; bottom:16px; right:50%; transform:translateX(50%); z-index:30;
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px;
+    display:flex; gap:4px; box-shadow:0 10px 30px -10px rgba(22,33,62,0.25); max-width:94vw; overflow-x:auto;
   }
   .tabbtn{
-    padding:14px 16px; background:none; border:none; font-family:inherit; font-size:14px;
-    color:var(--text-mute); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 16px; border-radius:14px;
+    cursor:pointer; font-size:10.5px; font-weight:600; color:var(--text-mute); background:none; border:none;
+    font-family:inherit; white-space:nowrap; flex-shrink:0;
   }
-  .tabbtn.active{ color:var(--ink); border-color:var(--gold); font-weight:600; }
+  .tabbtn .tab-icon{ font-size:18px; line-height:1; }
+  .tabbtn.active{ background:var(--ink); color:#fff; animation:mdjNavPop .25s cubic-bezier(0.34,1.56,0.64,1); }
 
-  main{ max-width:1080px; margin:0 auto; padding:28px 24px 80px; }
+  main{ max-width:1080px; margin:0 auto; padding:28px 24px 100px; }
   .view{ display:none; }
   @keyframes tabIn{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:translateY(0); } }
   .view.active{ display:block; animation:tabIn .3s cubic-bezier(0.22,1,0.36,1); }
-  .view.active{ display:block; }
 
   /* ===== الطلاب ===== */
   .students-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
@@ -341,10 +343,10 @@
 </header>
 
 <div class="tabs-bar">
-  <button class="tabbtn active" data-tab="students" onclick="switchTab('students')">👥 الطلاب</button>
-  <button class="tabbtn" data-tab="attendance" onclick="switchTab('attendance')">📋 التحضير</button>
-  <button class="tabbtn" data-tab="leaderboard" onclick="switchTab('leaderboard')">🏆 ترتيب الفصل</button>
-  <button class="tabbtn" data-tab="games" onclick="switchTab('games')">🎮 ألعاب</button>
+  <button class="tabbtn active" data-tab="students" onclick="switchTab('students')"><span class="tab-icon">👥</span>الطلاب</button>
+  <button class="tabbtn" data-tab="attendance" onclick="switchTab('attendance')"><span class="tab-icon">📋</span>التحضير</button>
+  <button class="tabbtn" data-tab="leaderboard" onclick="switchTab('leaderboard')"><span class="tab-icon">🏆</span>ترتيب الفصل</button>
+  <button class="tabbtn" data-tab="games" onclick="switchTab('games')"><span class="tab-icon">🎮</span>ألعاب</button>
 </div>
 
 <main>
