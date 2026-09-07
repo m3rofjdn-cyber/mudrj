@@ -51,29 +51,51 @@
   /* ===== الطلاب ===== */
   .students-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
   .students-toolbar .count{ color:var(--text-mute); font-size:13.5px; font-weight:300; }
-  .students-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; }
+  .students-grid{ display:flex; flex-direction:column; gap:10px; }
 
   @keyframes cardIn{ from{ opacity:0; transform:translateY(10px) scale(0.97); } to{ opacity:1; transform:translateY(0) scale(1); } }
   .student-box{
-    background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
-    position:relative; transition:box-shadow .15s ease; animation:cardIn .35s ease backwards;
+    background:var(--card); border:1px solid var(--line); border-radius:40px; padding:10px 18px;
+    display:flex; align-items:center; gap:12px; position:relative; transition:box-shadow .15s ease;
+    animation:cardIn .35s ease backwards;
   }
   .student-box.flash{ box-shadow:0 0 0 3px var(--gold-soft); }
-  .sb-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
-  .sb-name{ font-size:15px; font-weight:600; }
-  .sb-score{ font-size:13px; font-weight:700; color:var(--ink); background:var(--paper); padding:3px 10px; border-radius:20px; }
-  .sb-score.neg{ color:var(--danger); }
-  .sb-badges{ font-size:11.5px; color:var(--text-mute); font-weight:300; margin-bottom:12px; display:flex; gap:8px; }
-  .sb-rate-btn{
-    width:100%; padding:9px; border:1px solid var(--line); border-radius:9px; background:var(--paper);
-    font-family:inherit; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
-    transition:background .15s ease, transform .1s ease;
+
+  .sb-menu-btn{
+    background:none; border:none; color:var(--text-mute); font-size:18px; cursor:pointer;
+    padding:4px 8px; border-radius:8px; line-height:1; flex-shrink:0;
   }
-  .sb-rate-btn:hover{ background:#fff; border-color:var(--ink-soft); }
-  .sb-rate-btn:active{ transform:scale(0.97); }
-  .sb-menu-btn{ position:absolute; top:10px; left:10px; background:none; border:none; color:var(--text-mute); font-size:18px; cursor:pointer; opacity:0; padding:4px 8px; border-radius:6px; line-height:1; }
-  .student-box:hover .sb-menu-btn{ opacity:1; }
   .sb-menu-btn:hover{ background:var(--paper); color:var(--ink); }
+
+  .sb-rank{
+    background:#2A6DF4; color:#fff; font-size:12px; font-weight:700; padding:4px 12px;
+    border-radius:20px; flex-shrink:0;
+  }
+
+  .sb-dots{ flex:1; display:flex; align-items:center; gap:8px; overflow:hidden; padding:0 4px; }
+  .sb-dot{ width:26px; height:26px; border-radius:50%; background:var(--paper); flex-shrink:0; }
+  @media (max-width:700px){ .sb-dots{ display:none; } }
+
+  .sb-rate-btn{
+    background:var(--paper); border:none; color:var(--ink); width:34px; height:34px; border-radius:50%;
+    font-size:15px; cursor:pointer; flex-shrink:0; transition:background .15s ease, transform .1s ease;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sb-rate-btn:hover{ background:var(--gold-soft); }
+  .sb-rate-btn:active{ transform:scale(0.9); }
+
+  .sb-score{
+    font-size:12.5px; font-weight:700; color:#fff; background:var(--ok); padding:5px 12px;
+    border-radius:20px; flex-shrink:0; min-width:36px; text-align:center;
+  }
+  .sb-score.neg{ background:var(--danger); }
+
+  .sb-name{ font-size:14.5px; font-weight:600; white-space:nowrap; }
+  .sb-name-wrap{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .sb-avatar{
+    width:40px; height:40px; border-radius:50%; background:var(--ink); color:#fff; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700;
+  }
 
   .add-student-row{ display:flex; gap:10px; margin-top:20px; max-width:360px; }
   .add-student-row input{
@@ -554,11 +576,16 @@
     grid.innerHTML = currentStudents.map((s, i) => `
       <div class="student-box" id="student-${s.id}" style="animation-delay:${Math.min(i*35,400)}ms;">
         <button class="sb-menu-btn" onclick="openStudentMenu(${s.id})">⋮</button>
-        <div class="sb-top">
-          <div class="sb-name" style="cursor:pointer; text-decoration:underline; text-decoration-color:transparent; transition:text-decoration-color .15s;" onmouseover="this.style.textDecorationColor='var(--ink)'" onmouseout="this.style.textDecorationColor='transparent'" onclick="location.href='/student.html?id=${s.id}'">${s.is_leader ? '👑 ' : ''}${s.name}</div>
-          <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
+        <div class="sb-rank">${i+1}</div>
+        <div class="sb-dots">
+          ${Array(8).fill('<span class="sb-dot"></span>').join('')}
         </div>
-        <button class="sb-rate-btn" onclick="openBadgePanel(${s.id})">🏅 قيّم الطالب</button>
+        <button class="sb-rate-btn" onclick="openBadgePanel(${s.id})" title="قيّم الطالب">🏅</button>
+        <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
+        <div class="sb-name-wrap" style="cursor:pointer;" onclick="location.href='/student.html?id=${s.id}'">
+          <div class="sb-name">${s.is_leader ? '👑 ' : ''}${s.name}</div>
+          <div class="sb-avatar">${s.name.trim().charAt(0)}</div>
+        </div>
       </div>
     `).join('');
   }
