@@ -233,6 +233,34 @@
   }
   .badge-toast.show{ opacity:1; transform:translateX(50%) translateY(0); }
 
+  /* ===== النافذة السفلية المنزلقة (ألعاب) ===== */
+  .sheet-overlay{
+    display:none; position:fixed; inset:0; background:rgba(20,25,35,0.5); z-index:70;
+    align-items:flex-end; justify-content:center;
+  }
+  .sheet-overlay.show{ display:flex; animation:overlayFade .2s ease; }
+  .sheet-box{
+    background:var(--card); width:100%; max-width:420px; border-radius:24px 24px 0 0;
+    padding:14px 26px 34px; text-align:center; transform:translateY(100%);
+    transition:transform .32s cubic-bezier(0.22,1,0.36,1);
+  }
+  .sheet-overlay.show .sheet-box{ transform:translateY(0); }
+  .sheet-handle{ width:40px; height:4px; background:var(--line); border-radius:4px; margin:0 auto 18px; }
+  .sheet-team-label{ font-size:13px; font-weight:700; margin-bottom:10px; }
+  .sheet-avatar{
+    width:78px; height:78px; border-radius:50%; background:var(--ink); color:#fff; font-size:28px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 14px;
+  }
+  .sheet-name{ font-size:17px; font-weight:700; margin-bottom:22px; color:var(--text); }
+  .sheet-buttons{ display:flex; flex-direction:column; gap:10px; }
+  .sheet-btn{
+    padding:14px; border:none; border-radius:12px; font-family:inherit; font-size:14px; font-weight:700;
+    cursor:pointer; background:var(--paper); color:var(--text); transition:transform .1s ease;
+  }
+  .sheet-btn:active{ transform:scale(0.97); }
+  .sheet-btn.correct{ background:var(--ok); color:#fff; }
+  .sheet-btn.wrong{ background:var(--danger); color:#fff; }
+
   /* ===== قائمة خيارات الطالب (٣ نقاط) ===== */
   .menu-modal{ max-width:420px; padding:0; overflow-y:auto; overflow-x:hidden; }
   .menu-modal .badge-modal-head{ padding:20px 22px 12px; margin-bottom:0; }
@@ -557,6 +585,17 @@
   </div>
 </div>
 
+<!-- النافذة السفلية المنزلقة (تستخدمها كل الألعاب) -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="if(event.target===this) closeResultSheet()">
+  <div class="sheet-box" id="sheetBox">
+    <div class="sheet-handle"></div>
+    <div class="sheet-team-label" id="sheetTeamLabel" style="display:none;"></div>
+    <div class="sheet-avatar" id="sheetAvatar"></div>
+    <div class="sheet-name" id="sheetName"></div>
+    <div class="sheet-buttons" id="sheetButtons"></div>
+  </div>
+</div>
+
 <script>
   const token = localStorage.getItem('mudraj_token');
   if(!token){ window.location.href = '/'; }
@@ -736,6 +775,50 @@
     });
   }
 
+  // ===== النافذة السفلية المشتركة (تستخدمها الألعاب) =====
+  function showResultSheet(name, buttons, teamLabel){
+    document.getElementById('sheetName').textContent = name;
+    document.getElementById('sheetAvatar').textContent = name.trim().charAt(0);
+    const teamEl = document.getElementById('sheetTeamLabel');
+    if(teamLabel){ teamEl.textContent = teamLabel; teamEl.style.display = 'block'; }
+    else { teamEl.style.display = 'none'; }
+
+    const btnsBox = document.getElementById('sheetButtons');
+    btnsBox.innerHTML = '';
+    buttons.forEach(b => {
+      const btn = document.createElement('button');
+      btn.className = 'sheet-btn ' + (b.cls || '');
+      btn.textContent = b.label;
+      btn.onclick = b.onClick;
+      btnsBox.appendChild(btn);
+    });
+
+    document.getElementById('sheetOverlay').classList.add('show');
+  }
+  function closeResultSheet(){
+    document.getElementById('sheetOverlay').classList.remove('show');
+  }
+
+  // تقييم سريع لطالب من داخل الألعاب (يحدّث النقاط والدائرة لو الطالب ظاهر بالشبكة)
+  async function quickRate(studentId, type){
+    const data = await api('/api/students/' + studentId + '/rate', { method:'POST', body: JSON.stringify({ type }) });
+    if(!data || !data.success) return;
+    const idx = currentStudents.findIndex(s => s.id === studentId);
+    if(idx > -1) currentStudents[idx] = data.student;
+
+    const scoreEl = document.getElementById('score-' + studentId);
+    if(scoreEl){
+      scoreEl.textContent = data.student.score;
+      scoreEl.className = 'sb-score ' + (data.student.score < 0 ? 'neg' : '');
+    }
+    const dotsEl = document.getElementById('dots-' + studentId);
+    if(dotsEl) dotsEl.innerHTML = renderDots(data.student.recent_badges);
+
+    const badge = BADGES_CACHE ? BADGES_CACHE[type] : null;
+    closeResultSheet();
+    if(badge) showStickerBurst(badge.icon);
+  }
+
   function spinWheel(){
     if(currentStudents.length === 0) return;
     const btn = document.getElementById('spinBtn');
@@ -751,9 +834,14 @@
     canvas.style.transform = `rotate(${wheelRotation}deg)`;
     document.getElementById('wheelResult').textContent = '';
 
-    setTimeout(() => {
-      document.getElementById('wheelResult').textContent = '🎉 ' + currentStudents[winnerIndex].name;
+    setTimeout(async () => {
       btn.disabled = false;
+      const winner = currentStudents[winnerIndex];
+      await loadBadgesConfig();
+      showResultSheet(winner.name, [
+        { label: '✅ صح', cls: 'correct', onClick: () => quickRate(winner.id, 'correct') },
+        { label: '❌ خطأ', cls: 'wrong', onClick: () => quickRate(winner.id, 'wrong') },
+      ]);
     }, 4100);
   }
 
@@ -870,25 +958,26 @@
     if(c4Over) return;
     const queue = currentTeamQueue();
     const student = queue[currentTeamIdx()];
-    const card = document.getElementById('c4TurnCard');
-    card.className = 'c4-turn-card ' + (currentTeam === 'red' ? 'team-red' : 'team-blue');
     const teamLabel = currentTeam === 'red' ? '🔴 دور الفريق الأحمر' : '🔵 دور الفريق الأزرق';
-    card.innerHTML = `
-      <div class="c4-turn-team ${currentTeam}">${teamLabel}</div>
-      <div class="c4-turn-student">${student.name}</div>
-      <div class="c4-answer-btns">
-        <button class="c4-btn-correct" onclick="answerResult(true)">✅ إجابة صحيحة</button>
-        <button class="c4-btn-wrong" onclick="answerResult(false)">❌ إجابة خاطئة</button>
-      </div>
-    `;
+    const card = document.getElementById('c4TurnCard');
+    card.className = 'c4-turn-card';
+    card.innerHTML = '';
     awaitingDrop = false;
+
+    showResultSheet(student.name, [
+      { label: '✅ إجابة صحيحة', cls: 'correct', onClick: () => answerResult(true) },
+      { label: '❌ إجابة خاطئة', cls: 'wrong', onClick: () => answerResult(false) },
+      { label: '⏭️ لم يجب على السؤال', cls: '', onClick: () => answerResult(null) },
+    ], teamLabel);
   }
 
   function answerResult(correct){
-    if(correct){
+    closeResultSheet();
+    if(correct === true){
       awaitingDrop = true;
       const card = document.getElementById('c4TurnCard');
       const teamColor = currentTeam === 'red' ? 'الأحمر' : 'الأزرق';
+      card.className = 'c4-turn-card ' + (currentTeam === 'red' ? 'team-red' : 'team-blue');
       card.innerHTML = `
         <div class="c4-turn-team ${currentTeam}">${currentTeam==='red'?'🔴':'🔵'} إجابة صحيحة!</div>
         <div class="c4-drop-hint">اختر عمود بالشبكة تحت عشان تحط حلقة ${teamColor}</div>
@@ -896,7 +985,7 @@
     } else {
       advanceTeamIdx();
       currentTeam = currentTeam === 'red' ? 'blue' : 'red';
-      showNextQuestion();
+      setTimeout(() => showNextQuestion(), 320);
     }
   }
 
@@ -1013,6 +1102,13 @@
         emoji.classList.remove('chugging');
         trainRunning = false;
         btn.disabled = false;
+
+        loadBadgesConfig().then(() => {
+          showResultSheet(winner.name, [
+            { label: '✅ صح', cls: 'correct', onClick: () => quickRate(winner.id, 'correct') },
+            { label: '❌ خطأ', cls: 'wrong', onClick: () => quickRate(winner.id, 'wrong') },
+          ]);
+        });
       }
     }
     tick();
