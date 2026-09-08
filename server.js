@@ -134,6 +134,7 @@ async function initDB() {
     }
 
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT '';`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS recent_badges JSONB DEFAULT '[]';`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS rating_logs (
@@ -537,7 +538,7 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
   }
 
   try {
-    const studentRes = await pool.query('SELECT class_id FROM students WHERE id = $1', [req.params.id]);
+    const studentRes = await pool.query('SELECT class_id, recent_badges FROM students WHERE id = $1', [req.params.id]);
     if (studentRes.rows.length === 0) return res.status(404).json({ success: false, message: 'الطالب غير موجود' });
 
     const owns = await classBelongsToUser(studentRes.rows[0].class_id, req.user.userId);
@@ -545,9 +546,14 @@ app.post('/api/students/:id/rate', authenticateToken, async (req, res) => {
 
     const merged = await getMergedBadges(req.user.userId);
     const points = merged[type].points;
+    const icon = merged[type].icon;
+
+    const current = Array.isArray(studentRes.rows[0].recent_badges) ? studentRes.rows[0].recent_badges : [];
+    const updatedBadges = [{ type, icon, points }, ...current].slice(0, 8);
+
     const updated = await pool.query(
-      `UPDATE students SET score = score + $1 WHERE id = $2 RETURNING *`,
-      [points, req.params.id]
+      `UPDATE students SET score = score + $1, recent_badges = $2 WHERE id = $3 RETURNING *`,
+      [points, JSON.stringify(updatedBadges), req.params.id]
     );
     await pool.query(
       'INSERT INTO activity_log (student_id, type, points) VALUES ($1, $2, $3)',

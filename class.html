@@ -51,7 +51,8 @@
   /* ===== الطلاب ===== */
   .students-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
   .students-toolbar .count{ color:var(--text-mute); font-size:13.5px; font-weight:300; }
-  .students-grid{ display:flex; flex-direction:column; gap:10px; }
+  .students-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:640px){ .students-grid{ grid-template-columns:1fr; } }
 
   @keyframes cardIn{ from{ opacity:0; transform:translateY(10px) scale(0.97); } to{ opacity:1; transform:translateY(0) scale(1); } }
   .student-box{
@@ -72,9 +73,11 @@
     border-radius:20px; flex-shrink:0;
   }
 
-  .sb-dots{ flex:1; display:flex; align-items:center; gap:8px; overflow:hidden; padding:0 4px; }
-  .sb-dot{ width:26px; height:26px; border-radius:50%; background:var(--paper); flex-shrink:0; }
-  @media (max-width:700px){ .sb-dots{ display:none; } }
+  .sb-dots{ flex:1; display:flex; align-items:center; gap:5px; overflow:hidden; padding:0 2px; min-width:0; }
+  .sb-dot{ width:22px; height:22px; border-radius:50%; background:var(--paper); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .sb-dot.filled.pos{ background:var(--ok-bg); }
+  .sb-dot.filled.neg{ background:var(--danger-bg); }
+  @media (max-width:900px){ .sb-dots{ display:none; } }
 
   .sb-rate-btn{
     background:var(--paper); border:none; color:var(--ink); width:34px; height:34px; border-radius:50%;
@@ -174,6 +177,29 @@
   .badge-modal-close:hover{ background:#DFF2E4; }
   .badge-modal-sub{ font-size:12.5px; color:#6B8F79; font-weight:300; margin-bottom:18px; }
 
+  .badge-student-card{
+    background:var(--paper); border-radius:16px; padding:20px; text-align:center; margin-bottom:18px;
+  }
+  .badge-student-avatar{
+    width:64px; height:64px; border-radius:50%; background:var(--ink); color:#fff; font-size:24px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 10px;
+  }
+  .badge-student-name{ font-size:15px; font-weight:700; color:var(--text); }
+
+  .badge-att-title{ font-size:12px; font-weight:700; color:var(--text-mute); margin-bottom:8px; }
+  .badge-att-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:18px; }
+  .badge-att-btn{
+    display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; cursor:pointer;
+    padding:8px 10px; border-radius:12px; transition:background .15s ease;
+  }
+  .badge-att-btn:hover{ background:var(--paper); }
+  .badge-att-icon{
+    width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:16px; background:#D8DEE6; color:#fff;
+  }
+  .badge-att-btn.on .badge-att-icon{ background:var(--ok); }
+  .badge-att-label{ font-size:10px; color:var(--text-mute); font-weight:600; white-space:nowrap; }
+
   .badge-buttons-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   @media (max-width:480px){ .badge-buttons-grid{ grid-template-columns:1fr; } }
 
@@ -246,6 +272,8 @@
   [data-theme="dark"] .menu-item.danger:hover{ background:#2E2320; }
   [data-theme="dark"] .menu-label{ color:#E7F3EC; }
   [data-theme="dark"] .menu-soon-tag{ color:#6B7684; }
+  [data-theme="dark"] .badge-att-icon{ background:#2B3242; }
+  [data-theme="dark"] .badge-att-label{ color:#8CA79A; }
   [data-theme="dark"] .sb-rate-btn:hover{ background:#242B38; }
   [data-theme="dark"] .att-choice.late.on{ background:#3A2F16; color:#E0B84D; }
   [data-theme="dark"] .team-box.red{ background:#2E2320; }
@@ -500,9 +528,18 @@
 <div class="badge-overlay" id="badgeOverlay" onclick="if(event.target===this) closeBadgePanel()">
   <div class="badge-modal">
     <div class="badge-modal-head">
-      <div class="badge-modal-title" id="badgeModalTitle">تقييم الطالب</div>
+      <div></div>
       <button class="badge-modal-close" onclick="closeBadgePanel()">✕</button>
     </div>
+
+    <div class="badge-student-card">
+      <div class="badge-student-avatar" id="badgeStudentAvatar"></div>
+      <div class="badge-student-name" id="badgeModalTitle"></div>
+    </div>
+
+    <div class="badge-att-title">التحضير</div>
+    <div class="badge-att-row" id="badgeAttRow"></div>
+
     <div class="badge-modal-sub">اضغط أي وسام عشان تضيفه للطالب مباشرة</div>
     <div class="badge-buttons-grid" id="badgeButtonsGrid"></div>
   </div>
@@ -577,9 +614,7 @@
       <div class="student-box" id="student-${s.id}" style="animation-delay:${Math.min(i*35,400)}ms;">
         <button class="sb-menu-btn" onclick="openStudentMenu(${s.id})">⋮</button>
         <div class="sb-rank">${i+1}</div>
-        <div class="sb-dots">
-          ${Array(8).fill('<span class="sb-dot"></span>').join('')}
-        </div>
+        <div class="sb-dots" id="dots-${s.id}">${renderDots(s.recent_badges)}</div>
         <button class="sb-rate-btn" onclick="openBadgePanel(${s.id})" title="قيّم الطالب">🏅</button>
         <div class="sb-score ${s.score < 0 ? 'neg' : ''}" id="score-${s.id}">${s.score}</div>
         <div class="sb-name-wrap" style="cursor:pointer;" onclick="location.href='/student.html?id=${s.id}'">
@@ -588,6 +623,20 @@
         </div>
       </div>
     `).join('');
+  }
+
+  function renderDots(recentBadges){
+    const badges = Array.isArray(recentBadges) ? recentBadges : [];
+    const slots = [];
+    for(let i = 0; i < 8; i++){
+      const b = badges[i];
+      if(b){
+        slots.push(`<span class="sb-dot filled ${b.points >= 0 ? 'pos' : 'neg'}" title="${b.icon}">${b.icon}</span>`);
+      } else {
+        slots.push('<span class="sb-dot"></span>');
+      }
+    }
+    return slots.join('');
   }
 
   async function addStudent(){
@@ -980,10 +1029,36 @@
     return BADGES_CACHE;
   }
 
+  const ATTENDANCE_OPTIONS = [
+    { status:'present', label:'حاضر', icon:'✓' },
+    { status:'late', label:'متأخر', icon:'⏰' },
+    { status:'absent', label:'غائب', icon:'✕' },
+  ];
+
   async function openBadgePanel(studentId){
     activeBadgeStudentId = studentId;
     const student = currentStudents.find(s => s.id === studentId);
-    document.getElementById('badgeModalTitle').textContent = 'تقييم: ' + (student ? student.name : '');
+    document.getElementById('badgeModalTitle').textContent = student ? student.name : '';
+    document.getElementById('badgeStudentAvatar').textContent = student ? student.name.trim().charAt(0) : '؟';
+
+    // صف التحضير السريع (يسجّل حضور اليوم مباشرة)
+    const today = new Date().toISOString().slice(0,10);
+    let todayStatus = null;
+    try{
+      const attData = await api('/api/classes/' + classId + '/attendance?date=' + today);
+      if(attData && attData.success){
+        const rec = attData.records.find(r => r.student_id === studentId);
+        todayStatus = rec ? rec.status : null;
+      }
+    }catch(e){}
+
+    const attRow = document.getElementById('badgeAttRow');
+    attRow.innerHTML = ATTENDANCE_OPTIONS.map(opt => `
+      <div class="badge-att-btn ${todayStatus === opt.status ? 'on' : ''}" onclick="setTodayAttendance(${studentId}, '${opt.status}', this)">
+        <div class="badge-att-icon">${opt.icon}</div>
+        <div class="badge-att-label">${opt.label}</div>
+      </div>
+    `).join('');
 
     const badges = await loadBadgesConfig();
     const grid = document.getElementById('badgeButtonsGrid');
@@ -1001,6 +1076,17 @@
     }
 
     document.getElementById('badgeOverlay').classList.add('show');
+  }
+
+  async function setTodayAttendance(studentId, status, el){
+    const today = new Date().toISOString().slice(0,10);
+    el.parentElement.querySelectorAll('.badge-att-btn').forEach(b => b.classList.remove('on'));
+    el.classList.add('on');
+    await api('/api/classes/' + classId + '/attendance', {
+      method:'POST',
+      body: JSON.stringify({ date: today, records: [{ studentId, status }] })
+    });
+    showBadgeToast('✓ تم تسجيل التحضير');
   }
 
   function closeBadgePanel(){
@@ -1032,6 +1118,9 @@
       scoreEl.textContent = data.student.score;
       scoreEl.className = 'sb-score ' + (data.student.score < 0 ? 'neg' : '');
     }
+    const dotsEl = document.getElementById('dots-' + studentId);
+    if(dotsEl) dotsEl.innerHTML = renderDots(data.student.recent_badges);
+
     const box = document.getElementById('student-' + studentId);
     if(box){ box.classList.add('flash'); setTimeout(() => box.classList.remove('flash'), 400); }
 
