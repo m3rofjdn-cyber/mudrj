@@ -186,6 +186,91 @@
   </div>
 </main>
 
+<!-- قالب تقرير الطباعة (مخفي، يُستخدم فقط عند تنزيل PDF) -->
+<div id="printReport" style="position:fixed; top:-99999px; right:-99999px; width:900px; background:#fff; font-family:'IBM Plex Sans Arabic', sans-serif; color:#20242E;">
+  <div style="background:#16213E; padding:28px 40px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="color:#fff; font-size:28px; font-weight:700;">كشف الطالب</div>
+    <div style="display:flex; align-items:center; gap:10px; color:#fff;">
+      <div style="width:12px; height:12px; border-radius:3px; background:#C9922B;"></div>
+      <div style="font-size:20px; font-weight:700;">مُدرَج</div>
+    </div>
+  </div>
+
+  <div style="padding:30px 40px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+      <div style="background:#EAF7EE; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpSchool" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#2F6E4F; font-weight:700;">المدرسة</span>
+      </div>
+      <div style="background:#EAF7EE; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpPrincipal" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#2F6E4F; font-weight:700;">المدير</span>
+      </div>
+      <div style="background:#EAF7EE; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpTeacher" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#2F6E4F; font-weight:700;">المعلم</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+      <div style="background:#F7F4EC; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpClass" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#5B6472; font-weight:700;">الصف</span>
+      </div>
+      <div style="background:#F7F4EC; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpScore" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#5B6472; font-weight:700;">إجمالي النقاط</span>
+      </div>
+      <div style="background:#F7F4EC; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="rpDate" style="font-size:14px; font-weight:600;">—</span>
+        <span style="font-size:12px; color:#5B6472; font-weight:700;">التاريخ</span>
+      </div>
+    </div>
+
+    <div style="background:#F7F4EC; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+      <span id="rpStudentName" style="font-size:16px; font-weight:700;">—</span>
+      <span style="font-size:12px; color:#5B6472; font-weight:700;">الطالب</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:26px;">
+      <div style="background:#F7F4EC; border-radius:12px; padding:18px;">
+        <div style="font-size:13px; font-weight:700; margin-bottom:10px;">ملاحظات الطالب</div>
+        <div id="rpNotes" style="font-size:12.5px; color:#5B6472; line-height:1.9;">—</div>
+      </div>
+      <div style="background:#F7F4EC; border-radius:12px; padding:18px;">
+        <div style="font-size:13px; font-weight:700; margin-bottom:10px;">ملخص الأداء</div>
+        <div id="rpSummary" style="font-size:12.5px; color:#5B6472; line-height:1.9;">—</div>
+      </div>
+    </div>
+
+    <div style="font-size:15px; font-weight:700; margin-bottom:10px;" id="rpRatingsTitle">التقييمات</div>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:26px;">
+      <thead>
+        <tr style="background:#2F6E4F; color:#fff;">
+          <th style="padding:10px 14px; text-align:right; font-size:12.5px;">الحالة</th>
+          <th style="padding:10px 14px; text-align:center; font-size:12.5px;">العدد</th>
+          <th style="padding:10px 14px; text-align:right; font-size:12.5px;">التواريخ</th>
+        </tr>
+      </thead>
+      <tbody id="rpRatingsBody"></tbody>
+    </table>
+
+    <div style="font-size:15px; font-weight:700; margin-bottom:10px;">الحضور والغياب</div>
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="background:#2A5DB0; color:#fff;">
+          <th style="padding:10px 14px; text-align:right; font-size:12.5px;">الحالة</th>
+          <th style="padding:10px 14px; text-align:center; font-size:12.5px;">العدد</th>
+          <th style="padding:10px 14px; text-align:right; font-size:12.5px;">التواريخ</th>
+        </tr>
+      </thead>
+      <tbody id="rpAttendanceBody"></tbody>
+    </table>
+
+    <div style="margin-top:36px; text-align:center; font-size:10.5px; color:#9AA1AC;">تم إنشاء هذا التقرير بواسطة مُدرَج</div>
+  </div>
+</div>
+
 <script>
   const token = localStorage.getItem('mudraj_token');
   if(!token){ window.location.href = '/'; }
@@ -221,12 +306,15 @@
     return `منذ ${days} يوم`;
   }
 
+  let lastProfileData = null;
+
   async function loadProfile(){
     const data = await api('/api/students/' + studentId + '/profile');
     if(!data || !data.success){
       document.getElementById('loadingBox').textContent = 'تعذر تحميل ملف الطالب';
       return;
     }
+    lastProfileData = data;
 
     document.getElementById('loadingBox').style.display = 'none';
     document.getElementById('content').style.display = 'block';
@@ -285,20 +373,87 @@
     }
   }
 
+  function buildDatesText(dates){
+    if(!dates || dates.length === 0) return '—';
+    return dates.map(d => {
+      const parts = d.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}` : d;
+    }).join(' - ');
+  }
+
+  function generatePerformanceSummary(data){
+    const s = data.student;
+    const pos = data.positiveRate;
+    if(data.totalRatings === 0) return 'ما فيه تقييمات كافية بعد لعرض ملخص أداء الطالب.';
+    if(pos === null) return 'ما فيه تقييمات كافية بعد لعرض ملخص أداء الطالب.';
+    if(pos >= 80) return `يُظهر الطالب مستوى ممتاز، بنسبة تقييمات إيجابية ${pos}% من إجمالي ${data.totalRatings} تقييم مسجّل.`;
+    if(pos >= 60) return `يُظهر الطالب مستوى جيد مع تقدّم ملحوظ، بنسبة تقييمات إيجابية ${pos}% من إجمالي ${data.totalRatings} تقييم مسجّل.`;
+    if(pos >= 40) return `أداء الطالب متذبذب، بنسبة تقييمات إيجابية ${pos}% من إجمالي ${data.totalRatings} تقييم — يحتاج متابعة إضافية.`;
+    return `يحتاج الطالب دعمًا ومتابعة أكبر، حيث بلغت نسبة التقييمات الإيجابية ${pos}% فقط من إجمالي ${data.totalRatings} تقييم.`;
+  }
+
   async function downloadStudentPdf(){
+    if(!lastProfileData){ await uiAlert('البيانات لسا ما تحمّلت، جرّب بعد لحظة'); return; }
+    const data = lastProfileData;
+
     const btn = document.getElementById('downloadPdfBtn');
     const original = btn.textContent;
     btn.textContent = '⏳ جارٍ التجهيز...';
     btn.disabled = true;
+
     try{
-      const el = document.getElementById('content');
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#F7F4EC' });
+      // تعبئة قالب التقرير بالبيانات الحقيقية
+      document.getElementById('rpSchool').textContent = data.teacher.schoolName || '—';
+      document.getElementById('rpPrincipal').textContent = data.teacher.principalName || '—';
+      document.getElementById('rpTeacher').textContent = data.teacher.name || '—';
+      document.getElementById('rpClass').textContent = data.student.className || '—';
+      document.getElementById('rpScore').textContent = data.student.score;
+      document.getElementById('rpDate').textContent = new Date().toLocaleDateString('ar-SA-u-ca-gregory', { year:'numeric', month:'2-digit', day:'2-digit' });
+      document.getElementById('rpStudentName').textContent = data.student.name;
+      document.getElementById('rpNotes').textContent = data.student.notes && data.student.notes.trim() ? data.student.notes : '—';
+      document.getElementById('rpSummary').textContent = generatePerformanceSummary(data);
+
+      const ratingsBody = document.getElementById('rpRatingsBody');
+      document.getElementById('rpRatingsTitle').textContent = `التقييمات: ${data.totalRatings}`;
+      if(data.badgesDetailed && data.badgesDetailed.length > 0){
+        ratingsBody.innerHTML = data.badgesDetailed.map((b,i) => `
+          <tr style="background:${i%2===0?'#F7FBF8':'#fff'};">
+            <td style="padding:10px 14px; font-size:12.5px; text-align:right; font-weight:600;">${b.icon} ${b.label}</td>
+            <td style="padding:10px 14px; font-size:12.5px; text-align:center;">${b.count}</td>
+            <td style="padding:10px 14px; font-size:11px; color:#5B6472; text-align:right;">${buildDatesText(b.dates)}</td>
+          </tr>
+        `).join('');
+      } else {
+        ratingsBody.innerHTML = '<tr><td colspan="3" style="padding:14px; text-align:center; font-size:12.5px; color:#9AA1AC;">ما فيه تقييمات مسجّلة بعد</td></tr>';
+      }
+
+      const attBody = document.getElementById('rpAttendanceBody');
+      if(data.attendanceDetailed && data.attendanceDetailed.length > 0){
+        attBody.innerHTML = data.attendanceDetailed.map((a,i) => `
+          <tr style="background:${i%2===0?'#F0F5FB':'#fff'};">
+            <td style="padding:10px 14px; font-size:12.5px; text-align:right; font-weight:600;">${a.label}</td>
+            <td style="padding:10px 14px; font-size:12.5px; text-align:center;">${a.count}</td>
+            <td style="padding:10px 14px; font-size:11px; color:#5B6472; text-align:right;">${buildDatesText(a.dates)}</td>
+          </tr>
+        `).join('');
+      } else {
+        attBody.innerHTML = '<tr><td colspan="3" style="padding:14px; text-align:center; font-size:12.5px; color:#9AA1AC;">ما فيه تحضير مسجّل بعد</td></tr>';
+      }
+
+      const el = document.getElementById('printReport');
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/png');
       const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      const name = document.getElementById('pName').textContent || 'طالب';
-      pdf.save(`كشف-${name}.pdf`);
+
+      // A4 عمودي حقيقي
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = 210, pageHeight = 297;
+      const imgRatio = canvas.width / canvas.height;
+      let drawW = pageWidth, drawH = drawW / imgRatio;
+      if(drawH > pageHeight){ drawH = pageHeight; drawW = drawH * imgRatio; }
+      pdf.addImage(imgData, 'PNG', (pageWidth-drawW)/2, 0, drawW, drawH);
+
+      pdf.save(`كشف-${data.student.name}.pdf`);
     }catch(e){
       await uiAlert('تعذر إنشاء ملف PDF، جرّب مرة أخرى');
     }

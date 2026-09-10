@@ -677,6 +677,24 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
     const totalDays = attendance.present + attendance.late + attendance.absent;
     const attendanceRate = totalDays > 0 ? Math.round((attendance.present / totalDays) * 100) : null;
 
+    // سجل الحضور بالتفصيل مع التواريخ (لتقرير الطباعة)
+    const attDatesRes = await pool.query(
+      `SELECT status, date FROM attendance WHERE student_id = $1 ORDER BY date ASC`,
+      [req.params.id]
+    );
+    const attGrouped = {};
+    attDatesRes.rows.forEach(r => {
+      const key = r.status;
+      if (!attGrouped[key]) attGrouped[key] = [];
+      attGrouped[key].push(r.date);
+    });
+    const attendanceDetailed = Object.entries(attGrouped).map(([status, dates]) => ({
+      status,
+      label: status === 'present' ? 'حاضر' : status === 'late' ? 'متأخر' : 'غائب',
+      count: dates.length,
+      dates
+    }));
+
     const badgeCountsRes = await pool.query(
       `SELECT type, COUNT(*)::int AS count FROM activity_log WHERE student_id = $1 GROUP BY type`,
       [req.params.id]
@@ -690,6 +708,21 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
     }).sort((a, b) => b.count - a.count);
     const positiveRate = totalRatings > 0 ? Math.round((positiveRatings / totalRatings) * 100) : null;
 
+    // تواريخ كل نوع تقييم (لتقرير الطباعة)
+    const badgeDatesRes = await pool.query(
+      `SELECT type, created_at FROM activity_log WHERE student_id = $1 ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+    const badgeDatesGrouped = {};
+    badgeDatesRes.rows.forEach(r => {
+      if (!badgeDatesGrouped[r.type]) badgeDatesGrouped[r.type] = [];
+      badgeDatesGrouped[r.type].push(r.created_at);
+    });
+    const badgesDetailed = badgeCounts.map(b => ({
+      ...b,
+      dates: (badgeDatesGrouped[b.type] || []).map(d => new Date(d).toISOString().slice(0,10))
+    }));
+
     const activityRes = await pool.query(
       `SELECT type, points, created_at FROM activity_log WHERE student_id = $1 ORDER BY created_at DESC LIMIT 12`,
       [req.params.id]
@@ -700,6 +733,13 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
       created_at: a.created_at
     }));
 
+    // بيانات المعلم والمدرسة (لترويسة التقرير)
+    const teacherRes = await pool.query(
+      'SELECT first_name, school_name, principal_name FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+    const teacher = teacherRes.rows[0] || {};
+
     res.json({
       success: true,
       student: {
@@ -708,9 +748,17 @@ app.get('/api/students/:id/profile', authenticateToken, async (req, res) => {
         className: student.class_name, classId: student.class_id
       },
       attendance: { ...attendance, totalDays, attendanceRate },
+      attendanceDetailed,
       positiveRate,
       badgeCounts,
-      activities
+      badgesDetailed,
+      totalRatings,
+      activities,
+      teacher: {
+        name: teacher.first_name || '',
+        schoolName: teacher.school_name || '',
+        principalName: teacher.principal_name || ''
+      }
     });
   } catch (err) {
     console.error('خطأ بجلب ملف الطالب:', err.message);
