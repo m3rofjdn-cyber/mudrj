@@ -1318,8 +1318,8 @@
       { key:'grant_badge', label:'منح وسام', icon:'🏅', color:'#C9922B', action:()=>{ closeStudentMenu(); openBadgePanel(menuStudentId); } },
       { key:'stickers', label:'الملصقات التحفيزية', icon:'😊', color:'#C9922B', action:()=>openStickerPicker() },
       { key:'assign_leader', label:'تعيين قائد الفصل', icon:'📋', color:'#2A5DB0', action:()=>toggleLeader() },
-      { key:'thanks_cert', label:'إصدار شهادة شكر', icon:'📜', color:'#C9922B', action:()=>{ closeStudentMenu(); window.open('/certificate.html?id='+menuStudentId+'&type=thanks','_blank'); } },
-      { key:'success_cert', label:'إصدار تهنئة نجاح', icon:'🎓', color:'#C9922B', action:()=>{ closeStudentMenu(); window.open('/certificate.html?id='+menuStudentId+'&type=success','_blank'); } },
+      { key:'thanks_cert', label:'إصدار شهادة شكر', icon:'📜', color:'#C9922B', action:()=>openCertOptions('thanks') },
+      { key:'success_cert', label:'إصدار تهنئة نجاح', icon:'🎓', color:'#C9922B', action:()=>openCertOptions('success') },
     ]},
     { section: 'شؤون الطالب', items: [
       { key:'notes', label:'إضافة ملاحظات للطالب', icon:'📝', color:'#2AA198', action:()=>{ location.href='/student.html?id='+menuStudentId; } },
@@ -1460,6 +1460,23 @@
   }
 
   // ===== محادثة ولي الأمر =====
+  async function openCertOptions(type){
+    closeStudentMenu();
+    const choice = await uiChoose('كيف تبي تصدر الشهادة؟', [
+      { label: '📄 شهادة لهذا الطالب فقط', value: 'single' },
+      { label: '👥 شهادات لجميع طلاب الفصل', value: 'bulk' },
+      { label: '🎨 تخصيص الشهادة قبل التصدير', value: 'customize' },
+    ], type === 'success' ? 'تهنئة نجاح' : 'شهادة شكر وتقدير');
+
+    if(choice === 'single'){
+      window.open('/certificate.html?id=' + menuStudentId + '&type=' + type, '_blank');
+    } else if(choice === 'bulk'){
+      window.open('/certificate.html?classId=' + classId + '&type=' + type + '&bulk=1', '_blank');
+    } else if(choice === 'customize'){
+      window.open('/certificate.html?id=' + menuStudentId + '&type=' + type + '&customize=1', '_blank');
+    }
+  }
+
   async function chatParent(){
     closeStudentMenu();
     let phone = null;

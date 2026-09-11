@@ -45,6 +45,20 @@
     body{ background:#fff; }
     .certificate{ margin:0 auto; box-shadow:none; }
   }
+
+  .customize-hint{
+    max-width:1040px; margin:0 auto 12px; background:#FFF8E8; border:1px solid var(--gold-soft);
+    border-radius:10px; padding:10px 18px; font-size:12.5px; color:#8A6414; text-align:center;
+  }
+  [contenteditable="true"]{ outline:1px dashed var(--gold); border-radius:4px; cursor:text; }
+  [contenteditable="true"]:focus{ outline:2px solid var(--ink); background:#FFFDF7; }
+
+  .bulk-progress{
+    max-width:1040px; margin:0 auto 16px; background:#fff; border:1px solid #E4DFD1; border-radius:10px;
+    padding:14px 18px; text-align:center; font-size:13px; color:#5B6472;
+  }
+  .bulk-progress-bar{ height:6px; background:#F0EDE2; border-radius:6px; overflow:hidden; margin-top:8px; }
+  .bulk-progress-fill{ height:100%; background:var(--gold); width:0%; transition:width .2s ease; }
 </style>
 <link rel="stylesheet" href="/theme.css">
 <script src="/ui.js"></script>
@@ -58,6 +72,15 @@
   <button class="btn-print" id="downloadBtn" onclick="downloadCertPdf()">⬇️ تنزيل PDF</button>
 </div>
 
+<div class="customize-hint" id="customizeHint" style="display:none;">
+  ✏️ اضغط على أي نص بالشهادة (العنوان، الوصف، أو الفقرة) وعدّله مباشرة قبل ما تنزّل الملف
+</div>
+
+<div class="bulk-progress" id="bulkProgress" style="display:none;">
+  <div id="bulkProgressText">جارٍ تجهيز الشهادات...</div>
+  <div class="bulk-progress-bar"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
+</div>
+
 <div class="certificate" id="certificate">
   <div class="cert-corner tl">✦</div><div class="cert-corner tr">✦</div>
   <div class="cert-corner bl">✦</div><div class="cert-corner br">✦</div>
@@ -66,7 +89,7 @@
   <div class="cert-title" id="certTitle">شهادة شكر وتقدير</div>
   <div class="cert-sub" id="certSub">تُمنح هذه الشهادة تقديرًا للجهد والالتزام</div>
 
-  <div class="cert-line">تُقدَّم هذه الشهادة إلى الطالب</div>
+  <div class="cert-line" id="certLine">تُقدَّم هذه الشهادة إلى الطالب</div>
   <div class="cert-name" id="studentName">...</div>
 
   <div class="cert-body" id="certBody">
@@ -87,24 +110,53 @@
 
   const params = new URLSearchParams(window.location.search);
   const studentId = params.get('id');
+  const classIdParam = params.get('classId');
+  const isBulk = params.get('bulk') === '1';
+  const isCustomize = params.get('customize') === '1';
   const type = params.get('type') || 'thanks';
 
-  if(type === 'success'){
-    document.getElementById('certTitle').textContent = 'شهادة تهنئة بالنجاح';
-    document.getElementById('certSub').textContent = 'تهنئة خاصة بمناسبة التفوق والنجاح';
-    document.getElementById('certBody').textContent =
-      'تهنئكم إدارة الفصل بمناسبة تفوقه ونجاحه هذا الفصل الدراسي، ونتمنى له مزيدًا من التقدم والتفوق في المراحل القادمة.';
-  }
+  const defaultTitle = type === 'success' ? 'شهادة تهنئة بالنجاح' : 'شهادة شكر وتقدير';
+  const defaultSub = type === 'success' ? 'تهنئة خاصة بمناسبة التفوق والنجاح' : 'تُمنح هذه الشهادة تقديرًا للجهد والالتزام';
+  const defaultBody = type === 'success'
+    ? 'تهنئكم إدارة الفصل بمناسبة تفوقه ونجاحه هذا الفصل الدراسي، ونتمنى له مزيدًا من التقدم والتفوق في المراحل القادمة.'
+    : 'نظرًا لتميزه وحرصه المستمر خلال هذا الفصل الدراسي، نتقدم له بخالص الشكر والتقدير ونتمنى له دوام التوفيق والنجاح.';
 
-  let studentNameForFile = 'شهادة';
-
+  document.getElementById('certTitle').textContent = defaultTitle;
+  document.getElementById('certSub').textContent = defaultSub;
+  document.getElementById('certBody').textContent = defaultBody;
   document.getElementById('certDate').textContent = new Date().toLocaleDateString('ar-SA-u-ca-gregory', { year:'numeric', month:'long', day:'numeric' });
 
-  async function loadStudent(){
+  let studentNameForFile = 'شهادة';
+  let teacherInfo = { name:'—', schoolName:'—', principalName:'' };
+
+  if(isCustomize){
+    document.getElementById('customizeHint').style.display = 'block';
+    ['certTitle','certSub','certBody','certLine'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.setAttribute('contenteditable', 'true');
+    });
+  }
+
+  async function loadAccountInfo(){
     try{
-      const res = await fetch('/api/students/' + studentId + '/profile', {
-        headers:{ 'Authorization':'Bearer ' + token }
-      });
+      const res = await fetch('/api/account', { headers:{ 'Authorization':'Bearer ' + token } });
+      const data = await res.json();
+      if(data && data.success){
+        teacherInfo = {
+          name: data.account.firstName || data.account.username || '—',
+          schoolName: data.account.schoolName || '—',
+          principalName: data.account.principalName || ''
+        };
+        document.getElementById('teacherName').textContent = teacherInfo.name;
+        document.getElementById('schoolName').textContent = teacherInfo.schoolName;
+        document.getElementById('principalName').textContent = teacherInfo.principalName ? ('مدير المدرسة: ' + teacherInfo.principalName) : '';
+      }
+    }catch(e){}
+  }
+
+  async function loadSingleStudent(){
+    try{
+      const res = await fetch('/api/students/' + studentId + '/profile', { headers:{ 'Authorization':'Bearer ' + token } });
       const data = await res.json();
       if(data && data.success){
         document.getElementById('studentName').textContent = data.student.name;
@@ -112,50 +164,76 @@
       }
     }catch(e){}
   }
-  loadStudent();
 
-  async function loadAccountInfo(){
-    try{
-      const res = await fetch('/api/account', { headers:{ 'Authorization':'Bearer ' + token } });
-      const data = await res.json();
-      if(data && data.success){
-        document.getElementById('teacherName').textContent = data.account.firstName || data.account.username || '—';
-        document.getElementById('schoolName').textContent = data.account.schoolName || '—';
-        document.getElementById('principalName').textContent = data.account.principalName ? ('مدير المدرسة: ' + data.account.principalName) : '';
-      }
-    }catch(e){}
-  }
-  loadAccountInfo();
-
-  async function downloadCertPdf(){
-    const btn = document.getElementById('downloadBtn');
-    const original = btn.textContent;
-    btn.textContent = '⏳ جارٍ التجهيز...';
-    btn.disabled = true;
-    try{
-      const el = document.getElementById('certificate');
-      const canvas = await html2canvas(el, { scale: 3, backgroundColor: '#ffffff' });
+  function renderPdfPage(pdf, isFirstPage){
+    return html2canvas(document.getElementById('certificate'), { scale: 3, backgroundColor: '#ffffff' }).then(canvas => {
       const imgData = canvas.toDataURL('image/png');
-
-      // A4 عرضي حقيقي: 297×210 مم
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pageWidth = 297, pageHeight = 210;
-      const margin = 8;
+      if(!isFirstPage) pdf.addPage('a4', 'landscape');
+      const pageWidth = 297, pageHeight = 210, margin = 8;
       const availW = pageWidth - margin*2, availH = pageHeight - margin*2;
       const imgRatio = canvas.width / canvas.height;
       let drawW = availW, drawH = drawW / imgRatio;
       if(drawH > availH){ drawH = availH; drawW = drawH * imgRatio; }
       const x = (pageWidth - drawW) / 2, y = (pageHeight - drawH) / 2;
-
       pdf.addImage(imgData, 'PNG', x, y, drawW, drawH);
-      const typeLabel = type === 'success' ? 'تهنئة-نجاح' : 'شهادة-شكر';
-      pdf.save(`${typeLabel}-${studentNameForFile}.pdf`);
+    });
+  }
+
+  async function downloadCertPdf(){
+    const btn = document.getElementById('downloadBtn');
+    const original = btn.textContent;
+    btn.disabled = true;
+    const { jsPDF } = window.jspdf;
+
+    try{
+      if(isBulk){
+        btn.textContent = '⏳ جارٍ التجهيز...';
+        const progress = document.getElementById('bulkProgress');
+        const progressText = document.getElementById('bulkProgressText');
+        const progressFill = document.getElementById('bulkProgressFill');
+        progress.style.display = 'block';
+
+        const res = await fetch('/api/classes/' + classIdParam, { headers:{ 'Authorization':'Bearer ' + token } });
+        const data = await res.json();
+        if(!data || !data.success || !data.class.students.length){
+          await uiAlert('ما فيه طلاب بهذا الفصل');
+          btn.disabled = false; btn.textContent = original;
+          progress.style.display = 'none';
+          return;
+        }
+
+        const students = data.class.students;
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        for(let i = 0; i < students.length; i++){
+          document.getElementById('studentName').textContent = students[i].name;
+          progressText.textContent = `جارٍ تجهيز شهادة: ${students[i].name} (${i+1}/${students.length})`;
+          progressFill.style.width = Math.round(((i+1)/students.length)*100) + '%';
+          await new Promise(r => setTimeout(r, 30)); // نعطي وقت للمتصفح يحدّث الاسم بالـ DOM قبل التصوير
+          await renderPdfPage(pdf, i === 0);
+        }
+
+        pdf.save(`شهادات-${data.class.name}.pdf`);
+        progress.style.display = 'none';
+      } else {
+        btn.textContent = '⏳ جارٍ التجهيز...';
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        await renderPdfPage(pdf, true);
+        const typeLabel = type === 'success' ? 'تهنئة-نجاح' : 'شهادة-شكر';
+        pdf.save(`${typeLabel}-${studentNameForFile}.pdf`);
+      }
     }catch(e){
       await uiAlert('تعذر إنشاء ملف PDF، جرّب مرة أخرى');
     }
     btn.textContent = original;
     btn.disabled = false;
+  }
+
+  loadAccountInfo();
+  if(isBulk){
+    document.getElementById('studentName').textContent = 'اسم الطالب';
+  } else {
+    loadSingleStudent();
   }
 </script>
 </body>
