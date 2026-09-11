@@ -329,12 +329,25 @@
   .game-back:hover{ background:var(--card); }
   .game-title{ font-size:17px; font-weight:600; }
 
-  /* ===== إعداد فرق الأربعة ترجح ===== */
+  /* ===== إعداد فرق الأربعة تربح ===== */
   .c4-setup-box{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:32px; text-align:center; max-width:520px; margin:0 auto; }
   .c4-setup-title{ font-size:17px; font-weight:600; margin-bottom:6px; }
   .c4-setup-sub{ font-size:13px; color:var(--text-mute); font-weight:300; margin-bottom:20px; }
   .c4-teams-preview{ display:none; grid-template-columns:1fr 1fr; gap:14px; margin-top:24px; text-align:right; }
   .c4-teams-preview.show{ display:grid; }
+
+  .manual-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--paper);
+    border-radius:10px; padding:8px 14px;
+  }
+  .manual-row .m-name{ font-size:13.5px; font-weight:500; }
+  .manual-row .m-picks{ display:flex; gap:6px; }
+  .manual-pick{
+    padding:6px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card);
+    font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; color:var(--text-mute);
+  }
+  .manual-pick.red.on{ background:#FBEAE4; border-color:var(--danger); color:var(--danger); }
+  .manual-pick.blue.on{ background:#E8EFFB; border-color:#2A5DB0; color:#2A5DB0; }
   .team-box{ border-radius:12px; padding:14px; }
   .team-box.red{ background:#FBEAE4; }
   .team-box.blue{ background:#E8EFFB; }
@@ -385,7 +398,7 @@
   }
   .train-display.landed{ background:linear-gradient(135deg,#FBF3E5,#F7E8CE); color:var(--ink); }
 
-  /* ===== الأربعة ترجح ===== */
+  /* ===== الأربعة تربح ===== */
   .c4-status{ text-align:center; font-size:16px; font-weight:600; margin-bottom:16px; }
   .c4-board{
     display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; max-width:420px; margin:0 auto;
@@ -462,7 +475,7 @@
       <div class="games-grid">
         <div class="game-card" style="background:linear-gradient(135deg,#EAF2FF,#DCE9FF);" onclick="openGame('connect4')">
           <div class="game-emoji">🔴🔵</div>
-          <div class="game-name">الأربعة ترجح</div>
+          <div class="game-name">الأربعة تربح</div>
           <div class="game-desc">فرق عشوائية + أسئلة</div>
         </div>
         <div class="game-card" style="background:linear-gradient(135deg,#F3E9FB,#E9D9F7);" onclick="openGame('wheel')">
@@ -504,20 +517,26 @@
       </div>
     </div>
 
-    <!-- الأربعة ترجح (Connect 4) -->
+    <!-- الأربعة تربح (Connect 4) -->
     <div id="connect4Game" style="display:none;">
       <div class="game-header">
         <button class="game-back" onclick="closeGame()">→ رجوع للألعاب</button>
-        <div class="game-title">🔴🔵 الأربعة ترجح</div>
+        <div class="game-title">🔴🔵 الأربعة تربح</div>
       </div>
 
       <!-- خطوة تقسيم الفرق -->
       <div id="c4SetupStep">
         <div class="c4-setup-box">
-          <div class="c4-setup-title">قسّم الفصل لفريقين عشوائيًا</div>
+          <div class="c4-setup-title">قسّم الفصل لفريقين</div>
           <div class="c4-setup-sub">كل فريق ياخذ دور، ويجاوب أعضاءه بالترتيب على أسئلتك الشفهية</div>
-          <button class="wheel-btn" onclick="splitTeams()">🎲 قسّم الفصل الآن</button>
+          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button class="wheel-btn" onclick="splitTeams()">🎲 تقسيم عشوائي</button>
+            <button class="wheel-btn" style="background:var(--paper); color:var(--ink);" onclick="openManualSplit()">✋ تقسيم يدوي</button>
+          </div>
           <div class="c4-teams-preview" id="teamsPreview"></div>
+          <div id="manualSplitBox" style="display:none; margin-top:20px; text-align:right;">
+            <div id="manualSplitList" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;"></div>
+          </div>
           <button class="c4-reset" id="startC4Btn" style="display:none;" onclick="startConnect4()">▶️ ابدأ اللعبة</button>
         </div>
       </div>
@@ -859,14 +878,15 @@
     `).join('');
   }
 
-  // ===== الأربعة ترجح: تقسيم فرق + أسئلة =====
+  // ===== الأربعة تربح: تقسيم فرق + أسئلة =====
   const C4_ROWS = 6, C4_COLS = 7;
   let c4Grid = [];
   let c4Over = false;
   let redTeam = [], blueTeam = [];
   let redIdx = 0, blueIdx = 0;
   let currentTeam = 'red';
-  let awaitingDrop = false;
+  let awaitingAnswer = false;
+  let pendingCol = null;
 
   function openGame(name){
     document.getElementById('gamesHub').style.display = 'none';
@@ -905,6 +925,7 @@
     document.getElementById('c4PlayStep').style.display = 'none';
     document.getElementById('teamsPreview').classList.remove('show');
     document.getElementById('startC4Btn').style.display = 'none';
+    document.getElementById('manualSplitBox').style.display = 'none';
   }
 
   function shuffleArray(arr){
@@ -921,6 +942,7 @@
       await uiAlert('لازم فيه طالبين على الأقل بالفصل');
       return;
     }
+    document.getElementById('manualSplitBox').style.display = 'none';
     const shuffled = shuffleArray(currentStudents);
     redTeam = []; blueTeam = [];
     shuffled.forEach((s, i) => { (i % 2 === 0 ? redTeam : blueTeam).push(s); });
@@ -934,17 +956,68 @@
     document.getElementById('startC4Btn').style.display = 'inline-block';
   }
 
+  let manualAssignments = {};
+  function openManualSplit(){
+    if(currentStudents.length < 2){
+      uiAlert('لازم فيه طالبين على الأقل بالفصل');
+      return;
+    }
+    document.getElementById('teamsPreview').classList.remove('show');
+    document.getElementById('startC4Btn').style.display = 'none';
+    manualAssignments = {};
+
+    const box = document.getElementById('manualSplitBox');
+    box.style.display = 'block';
+    document.getElementById('manualSplitList').innerHTML = currentStudents.map(s => `
+      <div class="manual-row" data-student="${s.id}">
+        <div class="m-name">${s.name}</div>
+        <div class="m-picks">
+          <button class="manual-pick red" onclick="setManualTeam(${s.id}, 'red', this)">🔴 أحمر</button>
+          <button class="manual-pick blue" onclick="setManualTeam(${s.id}, 'blue', this)">🔵 أزرق</button>
+        </div>
+      </div>
+    `).join('');
+
+    if(!document.getElementById('manualConfirmBtn')){
+      const btn = document.createElement('button');
+      btn.id = 'manualConfirmBtn';
+      btn.className = 'c4-reset';
+      btn.textContent = '▶️ تأكيد وابدأ اللعبة';
+      btn.onclick = confirmManualSplit;
+      box.appendChild(btn);
+    }
+  }
+
+  function setManualTeam(studentId, team, btnEl){
+    manualAssignments[studentId] = team;
+    const row = btnEl.closest('.manual-row');
+    row.querySelectorAll('.manual-pick').forEach(b => b.classList.remove('on'));
+    btnEl.classList.add('on');
+  }
+
+  async function confirmManualSplit(){
+    redTeam = currentStudents.filter(s => manualAssignments[s.id] === 'red');
+    blueTeam = currentStudents.filter(s => manualAssignments[s.id] === 'blue');
+    if(redTeam.length === 0 || blueTeam.length === 0){
+      await uiAlert('لازم فيه طالب واحد على الأقل بكل فريق');
+      return;
+    }
+    startConnect4();
+  }
+
   function startConnect4(){
     c4Grid = Array.from({length: C4_ROWS}, () => Array(C4_COLS).fill(null));
     c4Over = false;
     redIdx = 0; blueIdx = 0;
     currentTeam = 'red';
-    awaitingDrop = false;
+    awaitingAnswer = false;
+    pendingCol = null;
 
     document.getElementById('c4SetupStep').style.display = 'none';
     document.getElementById('c4PlayStep').style.display = 'block';
+    document.getElementById('c4TurnCard').innerHTML = `<div class="c4-drop-hint">🔴 دور الفريق الأحمر — اضغط العمود اللي تبي تحط فيه حلقة</div>`;
+    document.getElementById('c4TurnCard').className = 'c4-turn-card';
     renderConnect4();
-    showNextQuestion();
   }
 
   function currentTeamQueue(){ return currentTeam === 'red' ? redTeam : blueTeam; }
@@ -954,15 +1027,28 @@
     else blueIdx = (blueIdx + 1) % blueTeam.length;
   }
 
-  function showNextQuestion(){
-    if(c4Over) return;
+  function updateTurnHint(){
+    const teamColor = currentTeam === 'red' ? '🔴 دور الفريق الأحمر' : '🔵 دور الفريق الأزرق';
+    document.getElementById('c4TurnCard').className = 'c4-turn-card';
+    document.getElementById('c4TurnCard').innerHTML = `<div class="c4-drop-hint">${teamColor} — اضغط العمود اللي تبي تحط فيه حلقة</div>`;
+  }
+
+  // يُستدعى لما يضغط المعلم على عمود: يختار طالب عشوائي من الفريق الحالي ويسأل قبل ما يحط الحلقة
+  function askQuestionForColumn(col){
+    if(c4Over || awaitingAnswer) return;
+
+    let targetRow = -1;
+    for(let r = C4_ROWS - 1; r >= 0; r--){
+      if(!c4Grid[r][col]){ targetRow = r; break; }
+    }
+    if(targetRow === -1) return; // العمود ممتلئ
+
+    pendingCol = col;
+    awaitingAnswer = true;
+
     const queue = currentTeamQueue();
     const student = queue[currentTeamIdx()];
     const teamLabel = currentTeam === 'red' ? '🔴 دور الفريق الأحمر' : '🔵 دور الفريق الأزرق';
-    const card = document.getElementById('c4TurnCard');
-    card.className = 'c4-turn-card';
-    card.innerHTML = '';
-    awaitingDrop = false;
 
     showResultSheet(student.name, [
       { label: '✅ إجابة صحيحة', cls: 'correct', onClick: () => answerResult(true) },
@@ -973,19 +1059,16 @@
 
   function answerResult(correct){
     closeResultSheet();
+    awaitingAnswer = false;
+    const col = pendingCol;
+    pendingCol = null;
+
     if(correct === true){
-      awaitingDrop = true;
-      const card = document.getElementById('c4TurnCard');
-      const teamColor = currentTeam === 'red' ? 'الأحمر' : 'الأزرق';
-      card.className = 'c4-turn-card ' + (currentTeam === 'red' ? 'team-red' : 'team-blue');
-      card.innerHTML = `
-        <div class="c4-turn-team ${currentTeam}">${currentTeam==='red'?'🔴':'🔵'} إجابة صحيحة!</div>
-        <div class="c4-drop-hint">اختر عمود بالشبكة تحت عشان تحط حلقة ${teamColor}</div>
-      `;
+      dropC4Piece(col);
     } else {
       advanceTeamIdx();
       currentTeam = currentTeam === 'red' ? 'blue' : 'red';
-      setTimeout(() => showNextQuestion(), 320);
+      updateTurnHint();
     }
   }
 
@@ -996,7 +1079,7 @@
       for(let c = 0; c < C4_COLS; c++){
         const cell = document.createElement('div');
         cell.className = 'c4-cell';
-        cell.onclick = () => dropC4Piece(c);
+        cell.onclick = () => askQuestionForColumn(c);
         if(c4Grid[r][c]){
           const piece = document.createElement('div');
           piece.className = 'c4-piece ' + c4Grid[r][c];
@@ -1008,7 +1091,6 @@
   }
 
   function dropC4Piece(col){
-    if(c4Over || !awaitingDrop) return;
     let targetRow = -1;
     for(let r = C4_ROWS - 1; r >= 0; r--){
       if(!c4Grid[r][col]){ targetRow = r; break; }
@@ -1017,7 +1099,6 @@
 
     c4Grid[targetRow][col] = currentTeam;
     renderConnect4();
-    awaitingDrop = false;
 
     if(checkC4Win(targetRow, col, currentTeam)){
       c4Over = true;
@@ -1033,7 +1114,7 @@
 
     advanceTeamIdx();
     currentTeam = currentTeam === 'red' ? 'blue' : 'red';
-    showNextQuestion();
+    updateTurnHint();
   }
 
   function checkC4Win(row, col, color){
