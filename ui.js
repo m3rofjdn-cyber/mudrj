@@ -126,6 +126,27 @@ function uiPrompt(message, defaultValue, title){
   });
 }
 
+// ===== بديل prompt() بحقل نص متعدد الأسطر (للملاحظات ونحوها) =====
+function uiPromptTextarea(message, defaultValue, title){
+  return new Promise(resolve => {
+    const overlay = mdjCreateOverlay();
+    overlay.innerHTML = `
+      <div class="mdj-box">
+        ${title ? `<div class="mdj-title">${title}</div>` : ''}
+        <div class="mdj-msg">${message}</div>
+        <textarea class="mdj-input" id="mdjTextarea" rows="5" style="resize:vertical; text-align:right; font-family:inherit;">${defaultValue || ''}</textarea>
+        <div class="mdj-actions">
+          <button class="mdj-btn-ghost" id="mdjCancel">إلغاء</button>
+          <button class="mdj-btn-primary" id="mdjOk">حفظ</button>
+        </div>
+      </div>`;
+    const input = overlay.querySelector('#mdjTextarea');
+    input.focus();
+    overlay.querySelector('#mdjCancel').onclick = () => mdjClose(overlay, resolve, null);
+    overlay.querySelector('#mdjOk').onclick = () => mdjClose(overlay, resolve, input.value);
+  });
+}
+
 // ===== بديل prompt() باختيار من قائمة (زر لكل خيار) =====
 function uiChoose(message, choices, title){
   // choices: [{label, value}]
