@@ -179,8 +179,8 @@
   }
 
   function renderPdfPage(pdf, isFirstPage){
-    return html2canvas(document.getElementById('certificate'), { scale: 3, backgroundColor: '#ffffff' }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
+    return html2canvas(document.getElementById('certificate'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       if(!isFirstPage) pdf.addPage('a4', 'landscape');
       const pageWidth = 297, pageHeight = 210, margin = 8;
       const availW = pageWidth - margin*2, availH = pageHeight - margin*2;
@@ -188,7 +188,7 @@
       let drawW = availW, drawH = drawW / imgRatio;
       if(drawH > availH){ drawH = availH; drawW = drawH * imgRatio; }
       const x = (pageWidth - drawW) / 2, y = (pageHeight - drawH) / 2;
-      pdf.addImage(imgData, 'PNG', x, y, drawW, drawH);
+      pdf.addImage(imgData, 'JPEG', x, y, drawW, drawH);
     });
   }
 

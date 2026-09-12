@@ -442,7 +442,7 @@
 
       const el = document.getElementById('printReport');
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       const { jsPDF } = window.jspdf;
 
       // A4 عمودي حقيقي
@@ -451,7 +451,7 @@
       const imgRatio = canvas.width / canvas.height;
       let drawW = pageWidth, drawH = drawW / imgRatio;
       if(drawH > pageHeight){ drawH = pageHeight; drawW = drawH * imgRatio; }
-      pdf.addImage(imgData, 'PNG', (pageWidth-drawW)/2, 0, drawW, drawH);
+      pdf.addImage(imgData, 'JPEG', (pageWidth-drawW)/2, 0, drawW, drawH);
 
       pdf.save(`كشف-${data.student.name}.pdf`);
     }catch(e){
