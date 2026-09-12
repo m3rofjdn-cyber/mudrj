@@ -39,6 +39,20 @@
     .mdj-btn-primary{ background:var(--ink,#16213E); color:#fff; }
     .mdj-btn-ghost{ background:var(--paper,#F7F4EC); color:var(--text-mute,#5B6472); }
     .mdj-btn-danger{ background:var(--danger,#B3432B); color:#fff; }
+
+    .mdj-choice-btn{
+      display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; border-radius:12px;
+      border:1px solid var(--line,#E4DFD1); background:var(--card,#fff); font-family:inherit; font-size:14px;
+      font-weight:600; color:var(--text,#20242E); cursor:pointer; text-align:right;
+      transition:background .15s ease, border-color .15s ease, transform .1s ease;
+    }
+    .mdj-choice-btn:hover{ background:var(--paper,#F7F4EC); border-color:var(--ink-soft,#2A3A63); }
+    .mdj-choice-btn:active{ transform:scale(0.98); }
+    .mdj-choice-cancel{
+      width:100%; padding:11px; border:none; border-radius:9px; background:none; color:var(--text-mute,#5B6472);
+      font-family:inherit; font-size:13px; font-weight:500; cursor:pointer; margin-top:4px;
+    }
+    .mdj-choice-cancel:hover{ text-decoration:underline; }
   `;
   document.head.appendChild(style);
 })();
@@ -121,18 +135,20 @@ function uiChoose(message, choices, title){
       <div class="mdj-box">
         ${title ? `<div class="mdj-title">${title}</div>` : ''}
         <div class="mdj-msg">${message}</div>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;" id="mdjChoices"></div>
-        <div class="mdj-actions"><button class="mdj-btn-ghost" id="mdjCancel" style="flex:1;">إلغاء</button></div>
+        <div style="display:flex; flex-direction:column; gap:10px;" id="mdjChoices"></div>
       </div>`;
     const list = overlay.querySelector('#mdjChoices');
     choices.forEach(c => {
       const btn = document.createElement('button');
-      btn.className = 'mdj-btn-ghost';
-      btn.style.textAlign = 'right';
+      btn.className = 'mdj-choice-btn';
       btn.textContent = c.label;
       btn.onclick = () => mdjClose(overlay, resolve, c.value);
       list.appendChild(btn);
     });
-    overlay.querySelector('#mdjCancel').onclick = () => mdjClose(overlay, resolve, null);
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'mdj-choice-cancel';
+    cancelBtn.textContent = 'إلغاء';
+    cancelBtn.onclick = () => mdjClose(overlay, resolve, null);
+    list.appendChild(cancelBtn);
   });
 }

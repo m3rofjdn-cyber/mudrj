@@ -19,10 +19,11 @@
   .btn-back{ background:#fff; border:1px solid #E4DFD1 !important; color:#5B6472; }
 
   .certificate{
-    max-width:1040px; aspect-ratio:297/210; margin:20px auto 60px; background:#fff; border:14px solid var(--gold);
+    width:1040px; height:736px; margin:20px auto 60px; background:#fff; border:14px solid var(--gold);
     outline:2px solid var(--ink); outline-offset:-22px;
     padding:44px 70px; text-align:center; position:relative;
     display:flex; flex-direction:column; justify-content:center;
+    box-sizing:border-box;
   }
   .cert-corner{ position:absolute; font-size:22px; color:var(--gold); }
   .cert-corner.tl{ top:16px; right:16px; } .cert-corner.tr{ top:16px; left:16px; }
@@ -68,7 +69,7 @@
 <body>
 
 <div class="toolbar">
-  <button class="btn-back" onclick="history.back()">→ رجوع</button>
+  <button class="btn-back" onclick="goBack()">→ رجوع</button>
   <button class="btn-print" id="downloadBtn" onclick="downloadCertPdf()">⬇️ تنزيل PDF</button>
 </div>
 
@@ -81,6 +82,7 @@
   <div class="bulk-progress-bar"><div class="bulk-progress-fill" id="bulkProgressFill"></div></div>
 </div>
 
+<div style="overflow-x:auto; padding:0 4px;">
 <div class="certificate" id="certificate">
   <div class="cert-corner tl">✦</div><div class="cert-corner tr">✦</div>
   <div class="cert-corner bl">✦</div><div class="cert-corner br">✦</div>
@@ -103,8 +105,19 @@
     <div class="box"><div class="val" id="schoolName">...</div><div class="line">المدرسة</div><div class="sub-val" id="principalName"></div></div>
   </div>
 </div>
+</div>
 
 <script>
+  function goBack(){
+    // الصفحة غالبًا تنفتح بتبويب جديد (window.open)، فـ history.back() ما يسوي شي
+    if(history.length > 1){ history.back(); }
+    else {
+      window.close();
+      // لو المتصفح ما قدر يقفل التبويب (سياسات أمان)، رجّعه لفصولي بدل ما يعلّق
+      setTimeout(() => { window.location.href = '/dashboard.html'; }, 200);
+    }
+  }
+
   const token = localStorage.getItem('mudraj_token');
   if(!token){ window.location.href = '/'; }
 
@@ -223,7 +236,8 @@
         pdf.save(`${typeLabel}-${studentNameForFile}.pdf`);
       }
     }catch(e){
-      await uiAlert('تعذر إنشاء ملف PDF، جرّب مرة أخرى');
+      console.error('خطأ إنشاء PDF:', e);
+      await uiAlert('تعذر إنشاء ملف PDF: ' + (e && e.message ? e.message : 'خطأ غير معروف') + '\nجرّب مرة أخرى، ولو تكررت المشكلة ابعثلي نص هذا الخطأ.');
     }
     btn.textContent = original;
     btn.disabled = false;
